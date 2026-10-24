@@ -99,6 +99,27 @@ public struct Palette: Hashable, Sendable {
     /// The title tab's colours, for a theme whose windows have one (BeOS).
     public var titleTab: TitleTabColors? = nil
 
+    /// A palette of an app's own, for a theme of its own (ChromeTheme's init).
+    public init(background: RGB, light: RGB, dark: RGB, border: RGB, well: RGB, highlight: RGB, text: RGB,
+                selectedText: RGB, disabledText: RGB, pinstripe: RGB, thumb: RGB, content: RGB, contentText: RGB,
+                dithersWells: Bool = false, titleTab: TitleTabColors? = nil) {
+        self.background = background
+        self.light = light
+        self.dark = dark
+        self.border = border
+        self.well = well
+        self.highlight = highlight
+        self.text = text
+        self.selectedText = selectedText
+        self.disabledText = disabledText
+        self.pinstripe = pinstripe
+        self.thumb = thumb
+        self.content = content
+        self.contentText = contentText
+        self.dithersWells = dithersWells
+        self.titleTab = titleTab
+    }
+
     public static let platinum = Palette(
         background: RGB(0xDDDDDD), light: RGB(0xFFFFFF), dark: RGB(0x888888), border: RGB(0x000000),
         well: RGB(0xBBBBBB), highlight: RGB(0x333399), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),

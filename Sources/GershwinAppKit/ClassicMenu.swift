@@ -10,7 +10,12 @@
 // Mouse: press, drag and release to choose; a quick click leaves the menu open (Mac OS 8's sticky menus), and then
 // hover and click. A ▸ row opens its submenu. Clicking outside closes it. Keys: ↑↓ move, → opens a submenu, ← closes
 // one, Return chooses, Esc closes, letters jump to the next item starting with them. Holding ⌥, ⇧ or ⌃ swaps in
-// alternate items.
+// alternate items. Given the titles of a bar (a menu bar of the app's own, or a status bar's items), moving onto
+// another title while a menu is open opens that one instead, as in the menu bar.
+//
+// A menu can open from an app that isn't active, as a status bar's helper does when its item is clicked: it then
+// takes the keyboard without activating the app, and closes when the mouse is pressed anywhere outside it or another
+// app comes to the front.
 
 import AppKit
 import GershwinChrome
@@ -296,7 +301,8 @@ private final class MenuPanel: NSPanel {
         super.init(contentRect: menuView.frame, styleMask: [.borderless, .nonactivatingPanel],
                    backing: .buffered, defer: false)
         isFloatingPanel = true
-        level = .popUpMenu
+        level = .popUpMenu   // after isFloatingPanel, which resets it
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         backgroundColor = .clear
         isOpaque = false
         // The Mac styles draw their own hard shadow; BeOS's is soft, as macOS draws.
@@ -310,6 +316,17 @@ private final class MenuPanel: NSPanel {
 
 // MARK: - Session
 
+/// A title in a bar that menus hang from: where it is on screen, and the menu it opens (made when it opens).
+public struct ClassicMenuTitle {
+    public let frame: NSRect
+    public let menu: @MainActor () -> NSMenu?
+
+    public init(frame: NSRect, menu: @escaping @MainActor () -> NSMenu?) {
+        self.frame = frame
+        self.menu = menu
+    }
+}
+
 @MainActor
 public final class ClassicMenu {
     /// Shows `menu` with its top-left corner at `topLeft` (screen coordinates), and returns once it closes, having sent
@@ -319,10 +336,13 @@ public final class ClassicMenu {
     ///   - lineUp: the index of an item to put at `topLeft` rather than the menu's top, as a pop-up button does with
     ///     its current choice.
     ///   - minimumWidth: in points: a pop-up's menu is at least as wide as the button.
+    ///   - titles: the bar's titles, to switch to when the mouse moves onto one; `current` is the one `menu` hangs
+    ///     from. A title's menu opens with its top-left at the title's bottom-left.
     @discardableResult
     public static func popUp(_ menu: NSMenu, at topLeft: NSPoint, theme: ClassicTheme, lineUp: Int? = nil,
-                             minimumWidth: CGFloat = 0) -> NSMenuItem? {
-        let session = ClassicMenu(theme: theme)
+                             minimumWidth: CGFloat = 0, titles: [ClassicMenuTitle] = [],
+                             current: Int? = nil) -> NSMenuItem? {
+        let session = ClassicMenu(theme: theme, titles: titles, current: current)
         return session.run(menu, at: topLeft, lineUp: lineUp, minimumWidth: minimumWidth / theme.scale)
     }
 
@@ -333,15 +353,26 @@ public final class ClassicMenu {
     }
 
     private let theme: ClassicTheme
+    private let titles: [ClassicMenuTitle]
+    private var currentTitle: Int?
     private var panels: [MenuPanel] = []
     private var chosen: NSMenuItem?
     private var closed = false
     private var lastMouse = NSPoint(x: CGFloat.nan, y: CGFloat.nan)
     private var openedAt = Date()
     private var movedToAnotherRow = false
+    /// Opened while the app wasn't active (a status bar's helper): what closes it is watched for, not sent.
+    private var fromBackground = false
+    private var frontApp: pid_t?
+    private var buttonsWereDown = 0
+    /// How many more times the menu may take the keyboard back from the front app, which often takes its key window
+    /// back just after the menu opens; a few at most, so it can't fight an app forever.
+    private var rekeys = 3
 
-    private init(theme: ClassicTheme) {
+    private init(theme: ClassicTheme, titles: [ClassicMenuTitle], current: Int?) {
         self.theme = theme
+        self.titles = titles
+        currentTitle = current
     }
 
     private func run(_ menu: NSMenu, at topLeft: NSPoint, lineUp: Int?, minimumWidth: CGFloat) -> NSMenuItem? {
@@ -351,15 +382,19 @@ public final class ClassicMenu {
         if let lineUp, panels[0].menuView.rows.indices.contains(lineUp) { panels[0].menuView.highlighted = lineUp }
         openedAt = Date()
         let startRow = panels[0].menuView.highlighted
+        fromBackground = !NSApp.isActive
+        frontApp = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        buttonsWereDown = NSEvent.pressedMouseButtons
 
         // The Menu Manager's way: take events until the menu closes, dispatching only what isn't the menu's.
         while !closed {
             let event = NSApp.nextEvent(matching: .any, until: Date(timeIntervalSinceNow: 1.0 / 60),
                                         inMode: .eventTracking, dequeue: true)
             track()
+            if fromBackground { watchFromBackground() }
             if panels.first?.menuView.highlighted != startRow { movedToAnotherRow = true }
             guard let event else {
-                if !NSApp.isActive { close(choosing: nil) }
+                if !NSApp.isActive && !fromBackground { close(choosing: nil) }
                 continue
             }
             handle(event)
@@ -418,6 +453,38 @@ public final class ClassicMenu {
         return nil
     }
 
+    /// From the background, no events say the mouse went down in another app or another app came forward, so they're
+    /// looked for.
+    private func watchFromBackground() {
+        let buttons = NSEvent.pressedMouseButtons
+        let pressed = buttons & ~buttonsWereDown
+        buttonsWereDown = buttons
+        let mouse = NSEvent.mouseLocation
+        if pressed != 0, hit(mouse) == nil, !titles.contains(where: { NSPointInRect(mouse, $0.frame) }) {
+            return close(choosing: nil)
+        }
+        if let front = NSWorkspace.shared.frontmostApplication?.processIdentifier, front != frontApp,
+           front != ProcessInfo.processInfo.processIdentifier {
+            return close(choosing: nil)
+        }
+        if let root = panels.first, !root.isKeyWindow, rekeys > 0 {
+            rekeys -= 1
+            root.makeKey()
+        }
+    }
+
+    /// Replaces the open menu with the one hanging from `titles[index]`.
+    private func switchTo(title index: Int) {
+        guard let menu = titles[index].menu() else { return }
+        currentTitle = index
+        closeSubmenus(after: -1)
+        menu.update()
+        let frame = titles[index].frame
+        open(menu, at: NSPoint(x: frame.minX, y: frame.minY), avoiding: nil)
+        panels[0].makeKeyAndOrderFront(nil)
+        movedToAnotherRow = true
+    }
+
     private func track() {
         for (level, panel) in panels.enumerated() where panel.menuView.update(modifiers: NSEvent.modifierFlags) {
             let top = panel.frame.maxY
@@ -428,6 +495,9 @@ public final class ClassicMenu {
         let mouse = NSEvent.mouseLocation
         guard mouse != lastMouse else { return }
         lastMouse = mouse
+        if let index = titles.firstIndex(where: { NSPointInRect(mouse, $0.frame) }), index != currentTitle {
+            return switchTo(title: index)
+        }
         guard let spot = hit(mouse) else { return }   // outside: keep what's highlighted
         let (level, row) = (spot.level, spot.row)
         panels[level].menuView.highlighted = row
@@ -445,7 +515,8 @@ public final class ClassicMenu {
     private func handle(_ event: NSEvent) {
         switch event.type {
         case .leftMouseDown, .rightMouseDown, .otherMouseDown:
-            if hit(NSEvent.mouseLocation) == nil { close(choosing: nil) }
+            let mouse = NSEvent.mouseLocation
+            if hit(mouse) == nil, !titles.contains(where: { NSPointInRect(mouse, $0.frame) }) { close(choosing: nil) }
         case .leftMouseUp, .rightMouseUp:
             // The click that opened the menu, let go at once without moving to another row: leave it open.
             if Date().timeIntervalSince(openedAt) < Metrics.stickyClick, !movedToAnotherRow { return }
