@@ -13,6 +13,10 @@
 // alternate items. Given the titles of a bar (a menu bar of the app's own, or a status bar's items), moving onto
 // another title while a menu is open opens that one instead, as in the menu bar.
 //
+// A menu can be torn off, as Mac OS 8.5's Application menu was: given `tearOff`, dragging out past its bottom edge
+// with the button held (from its title, or from a row) closes it, a dotted outline follows the mouse, and letting go
+// says where the palette it becomes should go.
+//
 // A menu can open from an app that isn't active, as a status bar's helper does when its item is clicked: it then
 // takes the keyboard without activating the app, and closes when the mouse is pressed anywhere outside it or another
 // app comes to the front.
@@ -338,11 +342,14 @@ public final class ClassicMenu {
     ///   - minimumWidth: in points: a pop-up's menu is at least as wide as the button.
     ///   - titles: the bar's titles, to switch to when the mouse moves onto one; `current` is the one `menu` hangs
     ///     from. A title's menu opens with its top-left at the title's bottom-left.
+    ///   - tearOff: lets the menu be torn off; called, once it closes, with where the palette's top-left goes (in
+    ///     screen coordinates). Nothing is chosen then.
     @discardableResult
     public static func popUp(_ menu: NSMenu, at topLeft: NSPoint, theme: ClassicTheme, lineUp: Int? = nil,
                              minimumWidth: CGFloat = 0, titles: [ClassicMenuTitle] = [],
-                             current: Int? = nil) -> NSMenuItem? {
+                             current: Int? = nil, tearOff: ((NSPoint) -> Void)? = nil) -> NSMenuItem? {
         let session = ClassicMenu(theme: theme, titles: titles, current: current)
+        session.onTearOff = tearOff
         return session.run(menu, at: topLeft, lineUp: lineUp, minimumWidth: minimumWidth / theme.scale)
     }
 
@@ -361,6 +368,11 @@ public final class ClassicMenu {
     private var lastMouse = NSPoint(x: CGFloat.nan, y: CGFloat.nan)
     private var openedAt = Date()
     private var movedToAnotherRow = false
+    private var onTearOff: ((NSPoint) -> Void)?
+    /// The outline being dragged, once the menu has come away.
+    private var tearing: ResizeOutline?
+    /// Where it was let go: its top-left.
+    private var tornAt: NSPoint?
     /// Opened while the app wasn't active (a status bar's helper): what closes it is watched for, not sent.
     private var fromBackground = false
     private var frontApp: pid_t?
@@ -390,8 +402,9 @@ public final class ClassicMenu {
         while !closed {
             let event = NSApp.nextEvent(matching: .any, until: Date(timeIntervalSinceNow: 1.0 / 60),
                                         inMode: .eventTracking, dequeue: true)
-            track()
-            if fromBackground { watchFromBackground() }
+            if onTearOff != nil { followTearOff() }
+            if tearing == nil { track() }
+            if fromBackground, tearing == nil { watchFromBackground() }
             if panels.first?.menuView.highlighted != startRow { movedToAnotherRow = true }
             guard let event else {
                 if !NSApp.isActive && !fromBackground { close(choosing: nil) }
@@ -400,10 +413,40 @@ public final class ClassicMenu {
             handle(event)
         }
         panels.forEach { $0.orderOut(nil) }
+        tearing?.orderOut(nil)
+        if let tornAt {
+            onTearOff?(tornAt)
+            return nil
+        }
         if let item = chosen, let action = item.action {
             NSApp.sendAction(action, to: item.target, from: item)
         }
         return chosen
+    }
+
+    /// Mac OS 8.5's tear-off: the button held and the mouse out past the menu's bottom edge, the menu comes away as a
+    /// dotted outline the mouse carries, by its top middle; let go, it's torn off there.
+    private func followTearOff() {
+        let held = NSEvent.pressedMouseButtons & 1 != 0
+        let mouse = NSEvent.mouseLocation
+        guard let tearing else {
+            guard held, let root = panels.first?.frame, mouse.y < root.minY - 6,
+                  mouse.x >= root.minX - 12, mouse.x <= root.maxX + 12 else { return }
+            panels.forEach { $0.orderOut(nil) }
+            let outline = ResizeOutline(frame: NSRect(x: mouse.x - root.width / 2, y: mouse.y - root.height + 6,
+                                                      width: root.width, height: root.height),
+                                        theme: theme, style: .utility)
+            outline.orderFront(nil)
+            self.tearing = outline
+            return
+        }
+        if held {
+            let size = tearing.frame.size
+            tearing.setFrameOrigin(NSPoint(x: mouse.x - size.width / 2, y: mouse.y - size.height + 6))
+        } else {
+            tornAt = NSPoint(x: tearing.frame.minX, y: tearing.frame.maxY)
+            close(choosing: nil)
+        }
     }
 
     private func open(_ menu: NSMenu, at topLeft: NSPoint, avoiding parentRow: NSRect?, lineUp: Int? = nil,
@@ -517,6 +560,8 @@ public final class ClassicMenu {
         case .leftMouseDown, .rightMouseDown, .otherMouseDown:
             let mouse = NSEvent.mouseLocation
             if hit(mouse) == nil, !titles.contains(where: { NSPointInRect(mouse, $0.frame) }) { close(choosing: nil) }
+        case .leftMouseUp where tearing != nil:
+            break   // followTearOff() sees the button go up
         case .leftMouseUp, .rightMouseUp:
             // The click that opened the menu, let go at once without moving to another row: leave it open.
             if Date().timeIntervalSince(openedAt) < Metrics.stickyClick, !movedToAnotherRow { return }

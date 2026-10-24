@@ -28,7 +28,8 @@ app can make its own.
   Also, each drawn in the theme's own family (Platinum, System 1–7 or BeOS):
   - `ClassicMenu`: any NSMenu drawn as a classic menu (submenus, alternates, keyboard, Mac OS 8's sticky click),
     for context menus and pop-ups. Given a bar's titles (`ClassicMenuTitle`), moving onto another opens its menu, as
-    in the menu bar; and it works from an app that isn't active, like a status bar's helper.
+    in the menu bar; it works from an app that isn't active, like a status bar's helper; and given `tearOff`,
+    it tears off as Mac OS 8.5's Application menu did, into a palette where it's dropped.
   - `ClassicPopUpButton`, `ClassicButton` (with the default button's ring), `ClassicProgressBar` (and System 7's
     barber pole), `ClassicAlert` (Stop, Caution and Note), and Balloon Help (`ClassicBalloon`), which a window's
     frame uses to explain its own parts.
