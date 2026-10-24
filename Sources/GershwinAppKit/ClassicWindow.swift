@@ -306,10 +306,31 @@ public final class ClassicFrameView: NSView {
     /// Where `mainView` goes, in this view's (Mac OS 9 pixel) coordinates.
     var mainRect: CGRect {
         switch family {
-        case .macintosh: macLayout.main
-        case .beos: beLayout.main
-        case .os2: os2Layout.main
+        case .macintosh: let l = macLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
+        case .beos: let l = beLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.growBox)
+        case .os2: let l = os2Layout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         }
+    }
+
+    /// The content panes draw their own scroll bars in (a ClassicSplitView's): the window's own scroll bar hides, and
+    /// `mainView` takes its column too. Set it before the window is sized (`frameSize(forContentSize:)`).
+    public var panesHaveScrollBars = false {
+        didSet {
+            scrollBar?.isHidden = panesHaveScrollBars || isCollapsed
+            relayout()
+        }
+    }
+
+    /// With `panesHaveScrollBars`, the bottom-right corner of `mainView` the panes' scroll bars stop short of, in
+    /// Mac OS 9 pixels: a BeOS window's grow box. Zero for the Mac's, which is in the placard row below, and OS/2's.
+    public var paneCorner: CGSize {
+        guard panesHaveScrollBars, family == .beos, let grow = beLayout.growBox else { return .zero }
+        return grow.size
+    }
+
+    private func paneArea(main: CGRect, scrollBar: CGRect?, grow: CGRect?) -> CGRect {
+        guard panesHaveScrollBars, let right = grow?.maxX ?? scrollBar?.maxX else { return main }
+        return CGRect(x: main.minX, y: main.minY, width: right - main.minX, height: main.height)
     }
 
     /// Lays out this view's parts and the container's placing of `mainView`.
@@ -322,10 +343,17 @@ public final class ClassicFrameView: NSView {
     func chromeSize(around size: NSSize) -> NSSize {
         // The chrome's own extent, from a layout of a big window; it doesn't depend on the window's size.
         let big = CGRect(x: 0, y: 0, width: 2000, height: 2000)
-        let main = switch family {
-        case .macintosh: WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar).main
-        case .beos: BeOSChromeLayout(bounds: big, style: style, titleWidths: [0]).main
-        case .os2: OS2ChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar).main
+        let main: CGRect
+        switch family {
+        case .macintosh:
+            let layout = WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+            main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: nil)
+        case .beos:
+            let layout = BeOSChromeLayout(bounds: big, style: style, titleWidths: [0])
+            main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: layout.growBox)
+        case .os2:
+            let layout = OS2ChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+            main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: nil)
         }
         let scale = theme.scale
         return NSSize(width: size.width + (big.width - main.width) * scale,
@@ -391,7 +419,7 @@ public final class ClassicFrameView: NSView {
     var isCollapsed = false {
         didSet {
             mainView?.isHidden = isCollapsed
-            scrollBar?.isHidden = isCollapsed
+            scrollBar?.isHidden = isCollapsed || panesHaveScrollBars
             tabBar?.isHidden = isCollapsed || !showsTabBar
             relayout()
             needsDisplay = true
@@ -1036,3 +1064,4 @@ public final class ClassicFrameView: NSView {
         return inside
     }
 }
+

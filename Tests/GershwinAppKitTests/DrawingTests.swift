@@ -301,7 +301,21 @@ func writeGallery() throws {
         focused.drawsFocus = true
         focused.frame = NSRect(x: 0, y: 0, width: 220 * theme.scale, height: focused.intrinsicContentSize.height)
         focused.layoutSubtreeIfNeeded()
-        let all = [("field", focused as NSView)] + pieces + [("alert", alertView), ("progress", progress), ("pole", pole), ("balloon", balloon),
+        let splitWindow = ClassicWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 200), style: .document,
+                                        theme: theme)
+        splitWindow.title = "~ — fish"
+        splitWindow.frameView.drawsAsActive = true
+        splitWindow.frameView.panesHaveScrollBars = true
+        let galleryPanes = Panes(theme: theme)
+        splitWindow.frameView.mainView = galleryPanes.host
+        splitWindow.contentView?.layoutSubtreeIfNeeded()
+        galleryPanes.split.frame = galleryPanes.host.bounds
+        galleryPanes.split.corner = splitWindow.frameView.paneCorner
+        galleryPanes.split.split(.sideBySide)
+        galleryPanes.split.split(.stacked)
+        splitWindow.contentView?.layoutSubtreeIfNeeded()
+        galleryPanes.split.layoutSubtreeIfNeeded()
+        let all = [("field", focused as NSView), ("split", splitWindow.contentView!)] + pieces + [("alert", alertView), ("progress", progress), ("pole", pole), ("balloon", balloon),
                             ("utility", utility.contentView!), ("controls", controls.contentView!),
                             ("document", document.contentView!)]
         for (name, view) in all {
@@ -479,4 +493,96 @@ func anOS2WindowHasABlueTitleBarWhenActive(theme: ClassicTheme) throws {
     #expect(rep(0, 0) == theme.palette.border)
     #expect(rep(2, 100) == theme.palette.background)   // the sizing border
     #expect(rep(Int(layout.closeButton.minX), Int(layout.closeButton.midY)) == theme.palette.border)   // its outline
+}
+
+// MARK: - Splits
+
+/// Plain coloured views as panes, in one host, under a split view.
+@MainActor
+private final class Panes {
+    let host = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+    var views: [String: NSView] = [:]
+    let split: ClassicSplitView<String>
+    private var next = 1
+
+    init(theme: ClassicTheme) {
+        split = ClassicSplitView(pane: "p0", theme: theme)
+        add("p0")
+        split.frame = host.bounds
+        host.addSubview(split)
+        split.paneView = { [unowned self] in self.views[$0] }
+        split.makePane = { [unowned self] in
+            let id = "p\(self.next)"
+            self.next += 1
+            self.add(id)
+            return id
+        }
+    }
+
+    private func add(_ id: String) {
+        let view = NSView()
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.white.cgColor
+        host.addSubview(view, positioned: .below, relativeTo: host.subviews.first { $0 is ClassicSplitView<String> })
+        views[id] = view
+    }
+}
+
+@MainActor
+@Test func splittingLaysThePanesOutWithoutMovingTheirViews() throws {
+    let panes = Panes(theme: .platinum)
+    panes.split.split(.sideBySide)
+    panes.split.layoutSubtreeIfNeeded()
+    let first = try #require(panes.views["p0"]), second = try #require(panes.views["p1"])
+    #expect(first.superview === panes.host && second.superview === panes.host)   // still the app's
+    // 293 pixels shared (a 7-pixel divider between), each pane less its 16-pixel scroll bar.
+    #expect(first.frame.minX == 0 && first.frame.width == 147 - 16)
+    #expect(second.frame.minX == 154 && second.frame.width == 146 - 16)
+    #expect(panes.split.focused == "p1")
+    let bars = panes.split.subviews.compactMap { $0 as? ClassicScrollBar }
+    #expect(bars.count == 2)
+}
+
+@MainActor
+@Test func closingAPaneGivesItsSpaceBack() throws {
+    let panes = Panes(theme: .platinum)
+    panes.split.split(.stacked)
+    let closed = panes.split.closeFocusedPane()
+    #expect(closed && panes.split.tree.panes == ["p0"] && panes.split.focused == "p0")
+    panes.split.layoutSubtreeIfNeeded()
+    #expect(panes.views["p0"]?.frame.height == 200)
+    #expect(panes.split.subviews.compactMap { $0 as? ClassicScrollBar }.count == 1)
+    let last = panes.split.closeFocusedPane()
+    #expect(!last)
+}
+
+@MainActor
+@Test(arguments: [ChromeTheme.platinum, .system7, .beos, .os2])
+func dividersAreDrawnInTheThemesWay(chrome: ChromeTheme) throws {
+    let theme = ClassicTheme(chrome)
+    let panes = Panes(theme: theme)
+    panes.split.split(.sideBySide)
+    panes.split.layoutSubtreeIfNeeded()
+    let rep = try render(panes.split)
+    let divider = try #require(panes.split.tree.layout(in: CGRect(x: 0, y: 0, width: 300, height: 200),
+                                                       divider: DividerStyle(chrome).thickness).dividers.first)
+    // The divider's edge meets the left pane: the outline colour, except BeOS's, which is a bevel.
+    let edge = rep(Int(divider.rect.minX), 100)
+    #expect(edge == (chrome.family == .beos ? chrome.palette.light : chrome.palette.border))
+    // The Mac's split box, above the right pane's scroll bar: raised, in the frame's grey.
+    if chrome.family == .macintosh {
+        #expect(rep(Int(panes.views["p1"]!.frame.maxX) + 8, 3) == chrome.palette.background)
+    }
+}
+
+@MainActor
+@Test func aPaneNotFocusedClosesAndTheFocusStays() {
+    let panes = Panes(theme: .platinum)
+    panes.split.split(.sideBySide)       // p1, focused
+    panes.split.split(.stacked)          // p2, focused
+    var closed: [String] = []
+    panes.split.onClose = { closed.append($0) }
+    let didClose = panes.split.closePane("p0")
+    #expect(didClose && closed == ["p0"] && panes.split.focused == "p2")
+    #expect(panes.split.tree.panes == ["p1", "p2"])
 }

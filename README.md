@@ -32,6 +32,9 @@ app can make its own.
   - `ClassicTextField`: an edit-text field showing the keyboard focus as its era did (Mac OS 8's ring in the
     highlight colour, System 7's caret alone, BeOS's blue outline), and `ClassicTabBar`, whose tabs also make a
     dialog's tab control (`opensOntoPanel`).
+  - Adjustable panes (`ClassicSplitView`, over a `SplitTree` of the app's own views, which it never re-parents):
+    each era's divider (Platinum's bevelled bar and split box, MPW's double line, Haiku's, OS/2's split bar), a scroll
+    bar for each pane, the one being typed in drawn active, and dividers dragged with an outline.
   - A progress bar in a document window's placard (`placardProgress`), and Mac OS 8's drop highlight
     (`ClassicDropHighlight`), to show over a view while something dragged over it can drop there.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,

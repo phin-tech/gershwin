@@ -25,13 +25,20 @@ public final class ClassicScrollBar: NSView {
 
     public var onScroll: ((ScrollRequest) -> Void)?
 
-    var isActive = true { didSet { if isActive != oldValue { needsDisplay = true } } }
+    /// Drawn as in the frontmost window (or the active pane); otherwise an empty outline, as Mac OS 9's were.
+    public var isActive = true { didSet { if isActive != oldValue { needsDisplay = true } } }
 
     private var pressed: ScrollbarPart?
 
-    init(theme: ClassicTheme) {
+    public init(theme: ClassicTheme) {
         self.theme = theme
         super.init(frame: .zero)
+    }
+
+    /// In Mac OS 9 pixels, whether in a window's (scaled) frame or anywhere else.
+    public override func layout() {
+        super.layout()
+        setClassicBounds(scale: theme.scale)
     }
 
     @available(*, unavailable)
