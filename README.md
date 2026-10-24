@@ -1,10 +1,11 @@
 # Gershwin
 
-Windows and controls drawn the way the classic Mac OS and BeOS drew them, for AppKit and SwiftUI on macOS 14 and
+Windows and controls drawn the way the classic Mac OS, BeOS and OS/2 Warp drew them, for AppKit and SwiftUI on macOS 14 and
 later. Named for the planned successor to Copland, the Mac OS that never shipped.
 
-Eight themes are built in: **Platinum** (Mac OS 8 and 9), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
-**System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**. A theme is a value (`ChromeTheme`), so an
+Ten themes are built in: **Platinum** (Mac OS 8 and 9), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
+**System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**, and **OS/2 Warp** and **OS/2 Warp
+Dark** (a sizing border round a blue title bar, the system menu at its left; the dark one is new, Warp had none). A theme is a value (`ChromeTheme`), so an
 app can make its own.
 
 ## What's in it
@@ -13,7 +14,7 @@ app can make its own.
   by id): their colour tokens (`Palette`), the colours of the text they show (`TextColors`: a terminal's sixteen, or a
   code view's), and their pairs for the other mode; `ThemeChoice`, a light and a dark theme and whether to follow
   macOS between them. And the geometry of every part: a Mac window's title bar, boxes, scroll bar, placard and grow box (`WindowChromeLayout`), a
-  BeOS window's sliding title tabs (`BeOSChromeLayout`), a proportional scroll thumb (`ScrollbarGeometry`), and tabs
+  BeOS window's sliding title tabs (`BeOSChromeLayout`), an OS/2 window's title bar and buttons (`OS2ChromeLayout`), a proportional scroll thumb (`ScrollbarGeometry`), and tabs
   (`TabList`, `TabStripLayout`).
 - **GershwinAppKit**: `ClassicWindow`, a borderless window that draws its whole frame itself: pinstriped title bar,
   close, zoom and collapse (WindowShade) boxes that track the mouse as the Toolbox did, a grow box that drags an
@@ -51,7 +52,8 @@ window.frameView.mainView = NSHostingView(rootView: MyView().gershwin(window.the
 window.makeKeyAndOrderFront(nil)
 ```
 
-Text is in ChicagoFLF when it is installed, and the system font otherwise; BeOS themes use Helvetica Bold.
+Text is in ChicagoFLF when it is installed, and the system font otherwise; BeOS and OS/2 themes use Helvetica Bold
+(for Swiss 721 and WarpSans, which aren't free).
 
 Gershwin came out of [Fanfare](https://github.com/phin-tech/fanfare-for-the-command-line), a terminal drawn this way.
 

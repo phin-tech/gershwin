@@ -47,10 +47,11 @@ public struct ClassicTheme: Sendable, Equatable {
         NSFont(name: "ChicagoFLF", size: size) ?? .systemFont(ofSize: size, weight: .semibold)
     }
 
-    /// The font of titles and controls in this appearance: Chicago for the Mac's, and for BeOS the bold sans its tabs
-    /// were set in (Swiss 721, which isn't free; Helvetica is its model).
+    /// The font of titles and controls in this appearance: Chicago for the Mac's, and for BeOS and OS/2 the bold sans
+    /// theirs were set in (Swiss 721 and WarpSans, which aren't free; Helvetica stands in).
     public func font(size: CGFloat = 12) -> NSFont {
-        guard chrome.family == .beos else { return Self.systemFont(size: size) }
+        // OS/2 Warp 4's titles and controls are in WarpSans Bold, which isn't free; Helvetica Bold stands in, as for BeOS.
+        guard chrome.family != .macintosh else { return Self.systemFont(size: size) }
         return NSFont(name: "Helvetica-Bold", size: size) ?? .boldSystemFont(ofSize: size)
     }
 

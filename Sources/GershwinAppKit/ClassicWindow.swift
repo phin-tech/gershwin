@@ -7,9 +7,10 @@ public protocol ClassicTabDelegate: AnyObject {
     func closeFrontTab(of window: ClassicWindow)
 }
 
-/// A window drawn in its appearance's own shape (FanfareKit's ChromeFamily): the classic Mac's, square and outlined
-/// in black under a pinstriped title bar with a close box on the left and zoom and collapse boxes on the right; or
-/// BeOS's, a grey frame under a yellow title tab. It is borderless, so macOS draws none of its own frame; everything is
+/// A window drawn in its appearance's own shape (ChromeFamily): the classic Mac's, square and outlined in black under
+/// a pinstriped title bar with a close box on the left and zoom and collapse boxes on the right; BeOS's, a grey frame
+/// under a yellow title tab; or OS/2 Warp's, a sizing border round a blue title bar with the system menu at its left and
+/// its buttons at its right. It is borderless, so macOS draws none of its own frame; everything is
 /// in `frameView`, and the window does what its boxes ask itself (a borderless window has no buttons for
 /// `performClose`/`performZoom` to press).
 ///
@@ -60,7 +61,7 @@ open class ClassicWindow: NSWindow {
     private func applyTheme() {
         appearance = theme.nsAppearance
         // A BeOS window is transparent beside its tabs, and clicks there go to whatever is behind.
-        let opaque = theme.chrome.family == .macintosh
+        let opaque = theme.chrome.family != .beos
         isOpaque = opaque
         backgroundColor = opaque ? theme.background : .clear
         container.needsLayout = true
@@ -233,8 +234,7 @@ final class ResizeOutline: NSWindow {
         override func draw(_ dirtyRect: NSRect) {
             NSColor.clear.setFill()
             bounds.fill(using: .copy)
-            let top = (theme.chrome.family == .beos ? BeOSMetrics.tabHeight(for: style) : style.collapsedHeight)
-                * theme.scale
+            let top = ClassicFrameView.collapsedHeight(family: theme.chrome.family, style: style) * theme.scale
             for (color, phase) in [(NSColor.white, CGFloat(0)), (NSColor.black, 2)] {
                 let path = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
                 path.move(to: NSPoint(x: bounds.minX, y: top - 0.5))
@@ -305,7 +305,11 @@ public final class ClassicFrameView: NSView {
 
     /// Where `mainView` goes, in this view's (Mac OS 9 pixel) coordinates.
     var mainRect: CGRect {
-        family == .macintosh ? macLayout.main : beLayout.main
+        switch family {
+        case .macintosh: macLayout.main
+        case .beos: beLayout.main
+        case .os2: os2Layout.main
+        }
     }
 
     /// Lays out this view's parts and the container's placing of `mainView`.
@@ -318,9 +322,11 @@ public final class ClassicFrameView: NSView {
     func chromeSize(around size: NSSize) -> NSSize {
         // The chrome's own extent, from a layout of a big window; it doesn't depend on the window's size.
         let big = CGRect(x: 0, y: 0, width: 2000, height: 2000)
-        let main = family == .macintosh
-            ? WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar).main
-            : BeOSChromeLayout(bounds: big, style: style, titleWidths: [0]).main
+        let main = switch family {
+        case .macintosh: WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar).main
+        case .beos: BeOSChromeLayout(bounds: big, style: style, titleWidths: [0]).main
+        case .os2: OS2ChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar).main
+        }
         let scale = theme.scale
         return NSSize(width: size.width + (big.width - main.width) * scale,
                       height: size.height + (big.height - main.height) * scale)
@@ -399,7 +405,7 @@ public final class ClassicFrameView: NSView {
     private var pressedTab: Int?
     private var extraHeight: CGFloat = 0
 
-    private enum Box { case close, zoom, collapse }
+    private enum Box { case close, zoom, collapse, hide, systemMenu }
 
     init(style: ClassicWindowStyle, theme: ClassicTheme) {
         self.style = style
@@ -419,7 +425,7 @@ public final class ClassicFrameView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     public override var isFlipped: Bool { true }
-    public override var isOpaque: Bool { family == .macintosh }
+    public override var isOpaque: Bool { family != .beos }
 
     private var family: ChromeFamily { theme.chrome.family }
 
@@ -445,13 +451,22 @@ public final class ClassicFrameView: NSView {
 
     /// The height of a collapsed window, in points.
     var collapsedHeight: CGFloat {
-        (family == .beos ? BeOSMetrics.tabHeight(for: style) : style.collapsedHeight) * theme.scale
+        Self.collapsedHeight(family: family, style: style) * theme.scale
+    }
+
+    /// In Mac OS 9 pixels: a Mac window's title bar, a BeOS window's tab, an OS/2 window's title bar in its border.
+    static func collapsedHeight(family: ChromeFamily, style: ClassicWindowStyle) -> CGFloat {
+        switch family {
+        case .macintosh: style.collapsedHeight
+        case .beos: BeOSMetrics.tabHeight(for: style)
+        case .os2: OS2Metrics.collapsedHeight(for: style)
+        }
     }
 
     // MARK: Tabs
 
-    /// The Mac family's tab bar shows from two tabs; BeOS's tabs are in its title row.
-    var showsTabBar: Bool { family == .macintosh && tabTitles.count > 1 }
+    /// The Mac's and OS/2's tab bar shows from two tabs; BeOS's tabs are in its title row.
+    var showsTabBar: Bool { family != .beos && tabTitles.count > 1 }
 
     private func tabsChanged() {
         tabBar?.titles = tabTitles
@@ -473,8 +488,13 @@ public final class ClassicFrameView: NSView {
 
     /// A utility window's title is small: Geneva 9, or for BeOS, a smaller bold.
     private var titleFont: NSFont {
-        guard style == .utility else { return theme.font(size: 12) }
-        return family == .beos ? theme.font(size: 10) : ClassicTheme.smallFont(size: 9)
+        switch (family, style) {
+        case (.os2, .utility): theme.font(size: 9)
+        case (.os2, _): theme.font(size: 11)
+        case (.beos, .utility): theme.font(size: 10)
+        case (.macintosh, .utility): ClassicTheme.smallFont(size: 9)
+        default: theme.font(size: 12)
+        }
     }
 
     private var macLayout: WindowChromeLayout {
@@ -484,6 +504,10 @@ public final class ClassicFrameView: NSView {
     /// The titles a BeOS window's tabs show: the tabs', or with one tab the window's own.
     private var beTitles: [String] {
         tabTitles.count > 1 ? tabTitles : [window?.title ?? ""]
+    }
+
+    private var os2Layout: OS2ChromeLayout {
+        OS2ChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar)
     }
 
     private var beLayout: BeOSChromeLayout {
@@ -502,6 +526,10 @@ public final class ClassicFrameView: NSView {
         case .beos:
             let layout = beLayout
             if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
+        case .os2:
+            let layout = os2Layout
+            if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
+            if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
         }
     }
 
@@ -579,6 +607,32 @@ public final class ClassicFrameView: NSView {
             if let rect = layout.scrollBar, rect.contains(point) { return (scroll, rect) }
             if let rect = layout.growBox, rect.contains(point) { return (grow, rect) }
             return nil
+        case .os2:
+            let layout = os2Layout
+            if layout.systemMenu.contains(point) {
+                return ("System menu: To move, size, hide or close this window, click here. To close it, "
+                        + "double-click.", layout.systemMenu)
+            }
+            if let hide = layout.hideButton, hide.contains(point) {
+                return ("Hide button: To put this window away, click here.", hide)
+            }
+            if let maximize = layout.maximizeButton, maximize.contains(point) {
+                return ("Maximize button: To make this window as large as the screen, or back, click here.", maximize)
+            }
+            if layout.closeButton.contains(point) { return ("Close button: To close this window, click here.",
+                                                            layout.closeButton) }
+            if layout.titleBar.contains(point) {
+                return ("Title bar: To move this window, drag here. To maximize it, double-click here.",
+                        layout.titleBar)
+            }
+            if let bar = layout.tabBar, bar.contains(point) {
+                return ("Tabs: To see what's in a tab, click it.", bar)
+            }
+            if let rect = layout.scrollBar, rect.contains(point) { return (scroll, rect) }
+            if !layout.content.contains(point) {
+                return ("Sizing border: To make this window larger or smaller, drag here.", bounds)
+            }
+            return nil
         }
     }
 
@@ -591,8 +645,70 @@ public final class ClassicFrameView: NSView {
             drawBeOS(beLayout)
             // The shadow follows the window's opaque shape, which the tabs change.
             window?.invalidateShadow()
+        case .os2:
+            drawOS2(os2Layout)
+            return
         }
         if let grow = family == .macintosh ? macLayout.growBox : beLayout.growBox { drawGrowBox(grow) }
+    }
+
+    private func drawOS2(_ layout: OS2ChromeLayout) {
+        let t = theme
+        // The sizing border: raised all round, the title bar and the content set into it.
+        t.background.setFill()
+        bounds.fill()
+        t.drawOutline(bounds)
+        t.drawRaisedBevel(bounds.insetBy(dx: 1, dy: 1))
+        let inside = layout.isCollapsed ? layout.titleBar : layout.titleBar.union(layout.content)
+        t.drawSunkenBevel(inside.insetBy(dx: -1, dy: -1))
+
+        let colours = t.palette.titleTab
+        (isActive ? colours.map { NSColor($0.face) } ?? t.highlight
+            : colours.map { NSColor($0.inactiveFace) } ?? t.background).setFill()
+        layout.titleBar.fill()
+        let title = window?.title ?? ""
+        let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
+                                         textHeight: ceil(titleFont.ascender - titleFont.descender))
+        let ink = isActive ? colours.map { NSColor($0.text) } ?? t.selectedText : t.text
+        t.drawText(title, in: titleRect, font: titleFont, color: ink, alignment: .center)
+
+        drawOS2Button(layout.systemMenu, glyph: .systemMenu)
+        if let hide = layout.hideButton { drawOS2Button(hide, glyph: .hide) }
+        if let maximize = layout.maximizeButton { drawOS2Button(maximize, glyph: .zoom) }
+        drawOS2Button(layout.closeButton, glyph: .close)
+        if !layout.isCollapsed, layout.content.height > 0 {
+            t.drawSunkenBevel(layout.content.insetBy(dx: -1, dy: -1))
+        }
+    }
+
+    /// A title bar button: a raised grey square, sunk while pressed, and its glyph in the middle.
+    private func drawOS2Button(_ rect: CGRect, glyph: Box) {
+        let t = theme
+        let pressed = pressedBox == glyph
+        t.drawButtonFace(rect, pressed: pressed)
+        let ink = t.text
+        let c = CGPoint(x: (rect.midX).rounded(.down) + (pressed ? 1 : 0), y: (rect.midY).rounded(.down) + (pressed ? 1 : 0))
+        ink.setFill()
+        switch glyph {
+        case .systemMenu:
+            // The window's icon: a small window, its title bar filled.
+            t.drawOutline(NSRect(x: c.x - 5, y: c.y - 4, width: 10, height: 9), color: ink)
+            NSRect(x: c.x - 5, y: c.y - 4, width: 10, height: 3).fill()
+        case .hide:
+            // Warp 4's hide button: a bar along the bottom.
+            NSRect(x: c.x - 3, y: c.y + 2, width: 6, height: 2).fill()
+        case .zoom:
+            // Maximize: a window filling the button, its top thick.
+            t.drawOutline(NSRect(x: c.x - 5, y: c.y - 5, width: 10, height: 10), color: ink)
+            NSRect(x: c.x - 5, y: c.y - 5, width: 10, height: 2).fill()
+        case .close:
+            for i in 0..<7 {
+                NSRect(x: c.x - 3 + CGFloat(i), y: c.y - 3 + CGFloat(i), width: 2, height: 1).fill()
+                NSRect(x: c.x + 2 - CGFloat(i), y: c.y - 3 + CGFloat(i), width: 2, height: 1).fill()
+            }
+        case .collapse:
+            break
+        }
     }
 
     private func drawMac(_ layout: WindowChromeLayout) {
@@ -640,7 +756,7 @@ public final class ClassicFrameView: NSView {
         t.drawButtonFace(face, pressed: pressed)
         let ink = pressed ? t.light : t.border
         switch glyph {
-        case .close:
+        case .close, .hide, .systemMenu:
             break
         case .zoom:
             // A smaller window in the top-left of the box.
@@ -766,7 +882,63 @@ public final class ClassicFrameView: NSView {
         switch family {
         case .macintosh: macMouseDown(event, at: point, in: window)
         case .beos: beMouseDown(event, at: point, in: window)
+        case .os2: os2MouseDown(event, at: point, in: window)
         }
+    }
+
+    private func os2MouseDown(_ event: NSEvent, at point: CGPoint, in window: ClassicWindow) {
+        let layout = os2Layout
+        if layout.systemMenu.contains(point) {
+            // A double-click on the window's icon closes it, as in OS/2.
+            if event.clickCount == 2 { return window.performClose(nil) }
+            return showSystemMenu(below: layout.systemMenu, in: window)
+        }
+        if layout.closeButton.contains(point) {
+            if track(.close, in: layout.closeButton) { window.performClose(nil) }
+            return
+        }
+        if let maximize = layout.maximizeButton, maximize.contains(point) {
+            if track(.zoom, in: maximize) { window.zoom(nil) }
+            return
+        }
+        if let hide = layout.hideButton, hide.contains(point) {
+            if track(.hide, in: hide) { window.miniaturize(nil) }
+            return
+        }
+        if layout.titleBar.contains(point), event.clickCount == 2 {
+            window.zoom(nil)
+            return
+        }
+        window.performDrag(with: event)
+    }
+
+    /// The system menu, under the window's icon: what the window can do.
+    private func showSystemMenu(below rect: CGRect, in window: ClassicWindow) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for (title, action, key) in [("Restore", #selector(NSWindow.zoom(_:)), ""),
+                                     ("Hide", #selector(NSWindow.miniaturize(_:)), ""),
+                                     ("Maximize", #selector(NSWindow.zoom(_:)), ""),
+                                     ("-", nil, ""),
+                                     ("Close", #selector(NSWindow.performClose(_:)), "")] as [(String, Selector?, String)] {
+            guard let action else {
+                menu.addItem(.separator())
+                continue
+            }
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+            item.target = window
+            menu.addItem(item)
+        }
+        let isMaximized = window.frame == (window.screen ?? NSScreen.main)?.visibleFrame
+        menu.item(withTitle: "Restore")?.isEnabled = isMaximized
+        menu.item(withTitle: "Maximize")?.isEnabled = !isMaximized && style == .document
+        menu.item(withTitle: "Hide")?.isEnabled = style == .document
+        pressedBox = .systemMenu
+        setNeedsDisplay(rect)
+        let onScreen = window.convertToScreen(convert(rect, to: nil))
+        ClassicMenu.popUp(menu, at: NSPoint(x: onScreen.minX, y: onScreen.minY), theme: theme)
+        pressedBox = nil
+        setNeedsDisplay(rect)
     }
 
     private func macMouseDown(_ event: NSEvent, at point: CGPoint, in window: ClassicWindow) {

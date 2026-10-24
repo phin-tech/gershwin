@@ -104,4 +104,24 @@ public struct TextColors: Hashable, Sendable {
         selectionBackground: RGB(0x000000), selectionForeground: RGB(0xFFFFFF),
         ansi: Array(repeating: RGB(0x000000), count: 7) + [RGB(0x808080)]
             + Array(repeating: RGB(0x000000), count: 7) + [RGB(0x808080)])
+
+    /// The PC's sixteen CGA colours, which OS/2's text windows used and ANSI's sixteen come from, in ANSI's order.
+    static let cga: [RGB] = [
+        RGB(0x000000), RGB(0xAA0000), RGB(0x00AA00), RGB(0xAA5500),
+        RGB(0x0000AA), RGB(0xAA00AA), RGB(0x00AAAA), RGB(0xAAAAAA),
+        RGB(0x555555), RGB(0xFF5555), RGB(0x55FF55), RGB(0xFFFF55),
+        RGB(0x5555FF), RGB(0xFF55FF), RGB(0x55FFFF), RGB(0xFFFFFF),
+    ]
+
+    /// OS/2's Enhanced Editor: black on white, CGA's colours, the selection CGA blue. Bright yellow and white, which
+    /// can't be read on white, become CGA's brown and dark grey.
+    public static let os2 = TextColors(
+        foreground: RGB(0x000000), background: RGB(0xFFFFFF), cursor: RGB(0x000000),
+        selectionBackground: RGB(0x0000AA), selectionForeground: RGB(0xFFFFFF),
+        ansi: Array(cga[0..<11]) + [RGB(0xAA5500)] + Array(cga[12..<15]) + [RGB(0x555555)])
+
+    /// An OS/2 window, as a text session showed one: CGA's light grey on black, and its sixteen as they were.
+    public static let os2Dark = TextColors(
+        foreground: RGB(0xAAAAAA), background: RGB(0x000000), cursor: RGB(0xAAAAAA),
+        selectionBackground: RGB(0x0000AA), selectionForeground: RGB(0xFFFFFF), ansi: cga)
 }

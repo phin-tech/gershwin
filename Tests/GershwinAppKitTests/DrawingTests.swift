@@ -285,6 +285,8 @@ func writeGallery() throws {
         controls.contentView?.layoutSubtreeIfNeeded()
         let document = ClassicWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 140), style: .document,
                                      theme: theme)
+        document.frameView.tabTitles = chrome.family == .os2 ? ["~ — fish", "make"] : []
+        document.frameView.selectedTab = chrome.family == .os2 ? 0 : nil
         document.title = "make"
         document.frameView.drawsAsActive = true
         document.frameView.placardText = "80 × 24  ·  ~/src"
@@ -462,4 +464,19 @@ func fieldShowsTheFocusAsItsEraDid(chrome: ChromeTheme, hasRing: Bool) throws {
     #expect(try render(bar)(inside.0, inside.1) == Palette.platinum.content)   // a document's tabs
     bar.opensOntoPanel = true
     #expect(try render(bar)(inside.0, inside.1) == Palette.platinum.background)
+}
+
+@MainActor
+@Test(arguments: [ClassicTheme(.os2), ClassicTheme(.os2Dark)])
+func anOS2WindowHasABlueTitleBarWhenActive(theme: ClassicTheme) throws {
+    let view = frameView(.document, theme)
+    let layout = OS2ChromeLayout(bounds: view.bounds, style: .document)
+    let face = try #require(theme.palette.titleTab)
+    #expect(try render(view)(Int(layout.titleBar.midX) - 60, Int(layout.titleBar.midY)) == face.inactiveFace)
+    view.drawsAsActive = true
+    let rep = try render(view)
+    #expect(rep(Int(layout.titleBar.midX) - 60, Int(layout.titleBar.midY)) == face.face)
+    #expect(rep(0, 0) == theme.palette.border)
+    #expect(rep(2, 100) == theme.palette.background)   // the sizing border
+    #expect(rep(Int(layout.closeButton.minX), Int(layout.closeButton.midY)) == theme.palette.border)   // its outline
 }

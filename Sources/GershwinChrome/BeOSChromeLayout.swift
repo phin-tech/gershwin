@@ -1,11 +1,14 @@
 import CoreGraphics
 
-/// The two shapes of window Fanfare draws.
+/// The shapes of window Gershwin draws.
 public enum ChromeFamily: Sendable {
     /// The classic Mac's: a title bar across the whole top, boxes at its ends (WindowChromeLayout).
     case macintosh
     /// BeOS's: a yellow tab only as wide as the title, on the top edge, over the desktop (BeOSChromeLayout).
     case beos
+    /// OS/2 Warp's: a sizing border all round, a coloured title bar with the system menu at its left and the hide,
+    /// maximize and close buttons at its right (OS2ChromeLayout).
+    case os2
 }
 
 /// The sizes of a BeOS window's parts, in points, as BeOS R5 drew them.

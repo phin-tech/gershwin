@@ -106,8 +106,15 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     public static let beosDark = ChromeTheme(id: "beosDark", name: "BeOS Dark", family: .beos, isDark: true,
                                              palette: .beosDark, textColors: .beosDark, partner: "beos")
 
+    /// OS/2 Warp 4: light grey frames under a blue title bar, the text an Enhanced Editor's, black on white.
+    public static let os2 = ChromeTheme(id: "os2", name: "OS/2 Warp", family: .os2, palette: .os2, textColors: .os2,
+                                        partner: "os2Dark")
+    /// OS/2 Warp in dark greys (which it never had), the text an OS/2 window's: grey on black, in CGA's colours.
+    public static let os2Dark = ChromeTheme(id: "os2Dark", name: "OS/2 Warp Dark", family: .os2, isDark: true,
+                                            palette: .os2Dark, textColors: .os2Dark, partner: "os2")
+
     public static let builtIn: [ChromeTheme] = [
-        .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark,
+        .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
     ]
 }
 
@@ -209,6 +216,25 @@ public struct Palette: Hashable, Sendable {
         content: RGB(0xFFFFFF), contentText: RGB(0x000000),
         titleTab: TitleTabColors(face: RGB(0xFFCB00), light: RGB(0xFFEC94), dark: RGB(0xC89A00),
                                  inactiveFace: RGB(0xE8E8E8)))
+
+    /// Warp 4's greys and its blue title bar. From memory of Warp 4's defaults: check against a running Warp 4 or
+    /// ArcaOS before treating them as exact.
+    public static let os2 = Palette(
+        background: RGB(0xCCCCCC), light: RGB(0xFFFFFF), dark: RGB(0x808080), border: RGB(0x404040),
+        well: RGB(0xB4B4B4), highlight: RGB(0x1D4F9A), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x808080), pinstripe: RGB(0xCCCCCC), thumb: RGB(0xCCCCCC),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0x1D4F9A), light: RGB(0x5A86C8), dark: RGB(0x0E2C5C),
+                                 inactiveFace: RGB(0xB4B4B4), text: RGB(0xFFFFFF)))
+
+    /// Warp's shapes in charcoal, the title bar the same blue.
+    public static let os2Dark = Palette(
+        background: RGB(0x3C3C40), light: RGB(0x5E5E64), dark: RGB(0x1E1E22), border: RGB(0x000000),
+        well: RGB(0x2C2C30), highlight: RGB(0x2A5CA8), text: RGB(0xE0E0E0), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x8A8A90), pinstripe: RGB(0x3C3C40), thumb: RGB(0x5E5E64),
+        content: RGB(0x000000), contentText: RGB(0xAAAAAA),
+        titleTab: TitleTabColors(face: RGB(0x2A5CA8), light: RGB(0x5A86C8), dark: RGB(0x123366),
+                                 inactiveFace: RGB(0x4A4A50), text: RGB(0xFFFFFF)))
 
     public static let beosDark = Palette(
         background: RGB(0x3A3A3C), light: RGB(0x58585B), dark: RGB(0x1E1E20), border: RGB(0x0C0C0C),
