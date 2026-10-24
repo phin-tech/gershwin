@@ -294,7 +294,12 @@ func writeGallery() throws {
         drop.frame = NSRect(x: 0, y: 0, width: 300, height: 140)
         document.frameView.mainView = drop
         document.contentView?.layoutSubtreeIfNeeded()
-        let all = pieces + [("alert", alertView), ("progress", progress), ("pole", pole), ("balloon", balloon),
+        let focused = ClassicTextField(theme: theme)
+        focused.stringValue = "pear"
+        focused.drawsFocus = true
+        focused.frame = NSRect(x: 0, y: 0, width: 220 * theme.scale, height: focused.intrinsicContentSize.height)
+        focused.layoutSubtreeIfNeeded()
+        let all = [("field", focused as NSView)] + pieces + [("alert", alertView), ("progress", progress), ("pole", pole), ("balloon", balloon),
                             ("utility", utility.contentView!), ("controls", controls.contentView!),
                             ("document", document.contentView!)]
         for (name, view) in all {
@@ -374,6 +379,11 @@ private struct GalleryControls: View {
                 Button("Bevel") {}.buttonStyle(ClassicBevelButtonStyle())
                 Button("On") {}.buttonStyle(ClassicBevelButtonStyle(isOn: true))
             }
+            ClassicField("Name", text: .constant("Fanfare")).frame(width: 200)
+            ClassicTabView(selection: .constant(1), titles: ["Appearance", "Text", "Sound"]) {
+                Text("The Text tab's page.")
+            }
+            .frame(width: 360)
         }
         .padding(12)
     }
@@ -413,4 +423,43 @@ func dropHighlightIsABandInsideTheEdge(chrome: ChromeTheme, color: RGB) throws {
     #expect(!utility.canBecomeMain)
     #expect(panel.canBecomeMain)
     #expect(utility.canBecomeKey)
+}
+
+
+@MainActor
+@Test(arguments: [(ChromeTheme.platinum, true), (.system7, false), (.beos, true)] as [(ChromeTheme, Bool)])
+func fieldShowsTheFocusAsItsEraDid(chrome: ChromeTheme, hasRing: Bool) throws {
+    let theme = ClassicTheme(chrome)
+    let field = ClassicTextField(theme: theme)
+    field.frame = NSRect(x: 0, y: 0, width: 120, height: field.intrinsicContentSize.height)
+    field.layoutSubtreeIfNeeded()
+    let mid = Int(field.bounds.midY)
+    let plain = try render(field)
+    #expect(plain(60, mid) == chrome.palette.content)
+    field.drawsFocus = true
+    let focused = try render(field)
+    switch chrome.family {
+    case .beos:
+        // A blue outline just inside the sunken edge.
+        #expect(focused(4, mid) != plain(4, mid))
+    default:
+        // Platinum's ring, two pixels outside the box (which starts 3 in); System 7 has none.
+        #expect((focused.alpha(1, mid) == 255 && focused(1, mid) == chrome.palette.highlight) == hasRing)
+        #expect(plain.alpha(1, mid) == 0)
+    }
+    #expect(focused(60, mid) == chrome.palette.content)
+}
+
+@MainActor
+@Test func dialogTabsOpenOntoAPanelInTheWindowsColour() throws {
+    let bar = ClassicTabBar(theme: .platinum)
+    bar.titles = ["Appearance", "Text"]
+    bar.selectedIndex = 0
+    bar.frame = NSRect(x: 0, y: 0, width: 300, height: ChromeMetrics.tabBarHeight)
+    bar.layoutSubtreeIfNeeded()
+    let front = try #require(bar.tabRects.first)
+    let inside = (Int(front.minX) + 6, Int(front.maxY) - 2)
+    #expect(try render(bar)(inside.0, inside.1) == Palette.platinum.content)   // a document's tabs
+    bar.opensOntoPanel = true
+    #expect(try render(bar)(inside.0, inside.1) == Palette.platinum.background)
 }

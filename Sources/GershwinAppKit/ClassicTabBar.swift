@@ -1,9 +1,13 @@
 import AppKit
 import GershwinChrome
 
-/// A document window's tabs, drawn in its appearance's era (FanfareKit's TabStyle): Mac OS 8 and 9's Appearance
-/// Manager tabs, or the file-folder tabs apps drew before it. The front tab is filled with the terminal's own
-/// background and has no bottom edge, so it reads as the page it opens onto.
+/// A row of tabs, drawn in its appearance's era (TabStyle): Mac OS 8 and 9's Appearance Manager tabs, or the
+/// file-folder tabs apps drew before it. The front tab has no bottom edge, so it reads as the page it opens onto: in a
+/// document window it's filled with the content's colour, and in a dialog's tab control (`opensOntoPanel`) with the
+/// window's, like the panel below it.
+///
+/// It draws in Mac OS 9 pixels: inside a window's frame, which is scaled already, as they are; anywhere else, scaled
+/// by its theme.
 @MainActor
 public final class ClassicTabBar: NSView {
     public var theme: ClassicTheme { didSet { needsDisplay = true } }
@@ -15,9 +19,19 @@ public final class ClassicTabBar: NSView {
     /// A double-click on the bar beside the tabs.
     public var onNewTab: (() -> Void)?
 
-    init(theme: ClassicTheme) {
+    /// The front tab opens onto a panel in the window's colour (a dialog's tabs), not the content's.
+    public var opensOntoPanel = false { didSet { needsDisplay = true } }
+
+    public init(theme: ClassicTheme) {
         self.theme = theme
         super.init(frame: .zero)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.tabGroup)
+    }
+
+    public override func layout() {
+        super.layout()
+        setClassicBounds(scale: theme.scale)
     }
 
     @available(*, unavailable)
@@ -72,7 +86,7 @@ public final class ClassicTabBar: NSView {
         NSGraphicsContext.saveGraphicsState()
         shape.addClip()
         if front {
-            NSColor(t.palette.content).setFill()
+            (opensOntoPanel ? t.background : NSColor(t.palette.content)).setFill()
             rect.fill()
         } else if t.chrome.tabStyle == .folder {
             t.fillWell(rect)
@@ -96,7 +110,7 @@ public final class ClassicTabBar: NSView {
         edge.lineWidth = 1
         edge.stroke()
 
-        let textColor = front ? NSColor(t.palette.contentText) : t.text
+        let textColor = front && !opensOntoPanel ? NSColor(t.palette.contentText) : t.text
         let label = CGRect(x: rect.minX + TabStripLayout.padding / 2, y: top + 1,
                            width: rect.width - TabStripLayout.padding, height: bottom - top - 1)
         if !front, t.palette.dithersWells {

@@ -25,12 +25,16 @@ app can make its own.
     frame uses to explain its own parts.
   - Utility windows (`.utility`): a thin title bar and small boxes, or BeOS's smaller tab. They float over the
     document they work on, which stays the main window.
+  - `ClassicTextField`: an edit-text field showing the keyboard focus as its era did (Mac OS 8's ring in the
+    highlight colour, System 7's caret alone, BeOS's blue outline), and `ClassicTabBar`, whose tabs also make a
+    dialog's tab control (`opensOntoPanel`).
   - A progress bar in a document window's placard (`placardProgress`), and Mac OS 8's drop highlight
     (`ClassicDropHighlight`), to show over a view while something dragged over it can drop there.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,
   `GroupBox` and `DisclosureGroup` beneath it, the way [NeoBrutalism](https://github.com/rational-kunal/NeoBrutalism)
   does, plus, for what SwiftUI won't let be styled, `ClassicPopUp`, `ClassicRadioGroup`, `ClassicSlider`,
-  `ClassicLittleArrows`, `ClassicBevelButtonStyle` and `.classicField()`.
+  `ClassicLittleArrows`, `ClassicBevelButtonStyle`, `ClassicField` (a `ClassicTextField`; SwiftUI's TextField
+  draws macOS's focus ring), `ClassicTabView` (Mac OS 8's tab control) and `.classicField()`.
 
 ```swift
 import GershwinAppKit
