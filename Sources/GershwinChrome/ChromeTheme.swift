@@ -24,7 +24,7 @@ private extension String {
 
 /// A look: the shape of the windows, how tabs are drawn, and the colours everything is drawn from. Eight are built
 /// in; an app can make its own (often from one of these, with a few colours changed).
-public struct ChromeTheme: Hashable, Sendable, Identifiable {
+public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     /// Stable across versions, for saving which one was chosen.
     public var id: String
     public var name: String
@@ -33,34 +33,78 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable {
     /// Whether macOS's own pieces (sheets, the font panel) should be drawn dark beside it.
     public var isDark: Bool
     public var palette: Palette
+    /// The colours of the text its windows show: a terminal's, a code view's.
+    public var textColors: TextColors
+    /// The id of its pair in the other mode (Platinum's is Hi-Tech, BeOS's BeOS Dark), for following macOS.
+    public var partner: String?
 
     public init(id: String, name: String, family: ChromeFamily = .macintosh, tabStyle: TabStyle = .appearanceManager,
-                isDark: Bool = false, palette: Palette) {
+                isDark: Bool = false, palette: Palette, textColors: TextColors? = nil, partner: String? = nil) {
         self.id = id
         self.name = name
         self.family = family
         self.tabStyle = tabStyle
         self.isDark = isDark
         self.palette = palette
+        self.textColors = textColors ?? TextColors(for: palette, isDark: isDark)
+        self.partner = partner
+    }
+
+    /// A built-in theme by its id.
+    public static func named(_ id: String, among themes: [ChromeTheme] = builtIn) -> ChromeTheme? {
+        themes.first { $0.id == id }
+    }
+
+    /// Its pair in dark mode: itself if it's dark; its partner; or Hi-Tech, Platinum's.
+    public func darkCounterpart(among themes: [ChromeTheme] = builtIn) -> ChromeTheme {
+        if isDark { return self }
+        return partner.flatMap { Self.named($0, among: themes) }.flatMap { $0.isDark ? $0 : nil } ?? .hiTech
+    }
+
+    /// Its pair in light mode: itself if it's light; its partner; or Platinum, Hi-Tech's.
+    public func lightCounterpart(among themes: [ChromeTheme] = builtIn) -> ChromeTheme {
+        if !isDark { return self }
+        return partner.flatMap { Self.named($0, among: themes) }.flatMap { $0.isDark ? nil : $0 } ?? .platinum
+    }
+
+    /// Saved as its id, so a settings file says "beos"; read back among the built-in themes.
+    public init(from decoder: Decoder) throws {
+        let id = try decoder.singleValueContainer().decode(String.self)
+        guard let theme = Self.named(id) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
+                                                    debugDescription: "no theme is called \(id)"))
+        }
+        self = theme
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(id)
     }
 
     /// Mac OS 8 and 9.
-    public static let platinum = ChromeTheme(id: "platinum", name: "Platinum", palette: .platinum)
+    public static let platinum = ChromeTheme(id: "platinum", name: "Platinum", palette: .platinum,
+                                             textColors: .platinum, partner: "hiTech")
     /// Copland's dark, metal theme, which Mac OS 8 was to ship as Hi-Tech.
-    public static let hiTech = ChromeTheme(id: "hiTech", name: "Hi-Tech", isDark: true, palette: .hiTech)
+    public static let hiTech = ChromeTheme(id: "hiTech", name: "Hi-Tech", isDark: true, palette: .hiTech,
+                                           textColors: .hiTech, partner: "platinum")
     /// Copland's toy-like theme, in the Mac OS 8 betas: mustard plastic and teal.
-    public static let gizmo = ChromeTheme(id: "gizmo", name: "Gizmo", palette: .gizmo)
+    public static let gizmo = ChromeTheme(id: "gizmo", name: "Gizmo", palette: .gizmo, textColors: .gizmo)
     /// Copland's sketchbook theme, in the Mac OS 8 betas: paper and pencil.
-    public static let drawingBoard = ChromeTheme(id: "drawingBoard", name: "Drawing Board", palette: .drawingBoard)
+    public static let drawingBoard = ChromeTheme(id: "drawingBoard", name: "Drawing Board", palette: .drawingBoard,
+                                                 textColors: .drawingBoard)
     /// System 7, in colour: flat greys, black highlights, file-folder tabs.
-    public static let system7 = ChromeTheme(id: "system7", name: "System 7", tabStyle: .folder, palette: .system7)
+    public static let system7 = ChromeTheme(id: "system7", name: "System 7", tabStyle: .folder, palette: .system7,
+                                            textColors: .platinum)
     /// The 1984 Macintosh: one bit, black on white.
-    public static let system1 = ChromeTheme(id: "system1", name: "System 1", tabStyle: .folder, palette: .system1)
+    public static let system1 = ChromeTheme(id: "system1", name: "System 1", tabStyle: .folder, palette: .system1,
+                                            textColors: .system1)
     /// BeOS R5: yellow title tabs on grey windows.
-    public static let beos = ChromeTheme(id: "beos", name: "BeOS", family: .beos, palette: .beos)
+    public static let beos = ChromeTheme(id: "beos", name: "BeOS", family: .beos, palette: .beos, textColors: .beos,
+                                         partner: "beosDark")
     /// BeOS, dark, as Haiku can be: charcoal windows, their tabs a fall orange.
     public static let beosDark = ChromeTheme(id: "beosDark", name: "BeOS Dark", family: .beos, isDark: true,
-                                             palette: .beosDark)
+                                             palette: .beosDark, textColors: .beosDark, partner: "beos")
 
     public static let builtIn: [ChromeTheme] = [
         .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark,

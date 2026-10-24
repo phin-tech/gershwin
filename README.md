@@ -9,8 +9,10 @@ app can make its own.
 
 ## What's in it
 
-- **GershwinChrome**: plain values, no AppKit, tested headless. The themes and their colour tokens (`Palette`), and the
-  geometry of every part: a Mac window's title bar, boxes, scroll bar, placard and grow box (`WindowChromeLayout`), a
+- **GershwinChrome**: plain values, no AppKit, tested headless. The themes (`ChromeTheme.builtIn`, found and saved
+  by id): their colour tokens (`Palette`), the colours of the text they show (`TextColors`: a terminal's sixteen, or a
+  code view's), and their pairs for the other mode; `ThemeChoice`, a light and a dark theme and whether to follow
+  macOS between them. And the geometry of every part: a Mac window's title bar, boxes, scroll bar, placard and grow box (`WindowChromeLayout`), a
   BeOS window's sliding title tabs (`BeOSChromeLayout`), a proportional scroll thumb (`ScrollbarGeometry`), and tabs
   (`TabList`, `TabStripLayout`).
 - **GershwinAppKit**: `ClassicWindow`, a borderless window that draws its whole frame itself: pinstriped title bar,
@@ -34,7 +36,8 @@ app can make its own.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,
   `GroupBox` and `DisclosureGroup` beneath it, the way [NeoBrutalism](https://github.com/rational-kunal/NeoBrutalism)
   does, plus, for what SwiftUI won't let be styled, `ClassicPopUp`, `ClassicRadioGroup`, `ClassicSlider`,
-  `ClassicLittleArrows`, `ClassicBevelButtonStyle`, `ClassicField` (a `ClassicTextField`; SwiftUI's TextField
+  `ClassicLittleArrows`, `ClassicBevelButtonStyle`, `ClassicThemeChooser` (a settings pane's theme pop-ups and
+  Follow macOS checkbox, for a `ThemeChoice`), `ClassicField` (a `ClassicTextField`; SwiftUI's TextField
   draws macOS's focus ring), `ClassicTabView` (Mac OS 8's tab control) and `.classicField()`.
 
 ```swift
