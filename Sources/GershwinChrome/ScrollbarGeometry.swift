@@ -22,27 +22,46 @@ public struct ScrollPosition: Equatable, Sendable {
     public var maxOffset: UInt64 { total > visible ? total - visible : 0 }
 }
 
-/// A vertical Platinum scroll bar's parts and arithmetic: an arrow at each end, the track between them and a
-/// proportional thumb (Mac OS 8.5's "smart scrolling") no shorter than the arrows. Flipped coordinates.
+/// Where a scroll bar's arrows are.
+public enum ScrollArrows: Sendable {
+    /// One at each end: the Mac's, BeOS's, OS/2's and Windows'.
+    case atEnds
+    /// Both at the bottom, up above down: the Amiga's (and NeXT's).
+    case together
+}
+
+/// A vertical scroll bar's parts and arithmetic: its arrows, the track and a proportional thumb (Mac OS 8.5's "smart
+/// scrolling") no shorter than the arrows. Flipped coordinates.
 public struct ScrollbarGeometry: Equatable, Sendable {
     public let bounds: CGRect
+    public let arrows: ScrollArrows
 
-    public init(bounds: CGRect) {
+    public init(bounds: CGRect, arrows: ScrollArrows = .atEnds) {
         self.bounds = bounds
+        self.arrows = arrows
     }
 
     private var arrowLength: CGFloat { min(ChromeMetrics.scrollBarWidth, bounds.height / 2) }
 
+    private var arrowLength2: CGFloat { arrows == .together ? min(ChromeMetrics.scrollBarWidth, bounds.height / 3)
+        : arrowLength }
+
     public var upArrow: CGRect {
-        CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: arrowLength)
+        switch arrows {
+        case .atEnds: CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: arrowLength)
+        case .together: CGRect(x: bounds.minX, y: bounds.maxY - arrowLength2 * 2, width: bounds.width,
+                               height: arrowLength2)
+        }
     }
 
     public var downArrow: CGRect {
-        CGRect(x: bounds.minX, y: bounds.maxY - arrowLength, width: bounds.width, height: arrowLength)
+        CGRect(x: bounds.minX, y: bounds.maxY - arrowLength2, width: bounds.width, height: arrowLength2)
     }
 
     public var track: CGRect {
-        CGRect(x: bounds.minX, y: upArrow.maxY, width: bounds.width, height: max(0, downArrow.minY - upArrow.maxY))
+        let top = arrows == .together ? bounds.minY : upArrow.maxY
+        let bottom = arrows == .together ? upArrow.minY : downArrow.minY
+        return CGRect(x: bounds.minX, y: top, width: bounds.width, height: max(0, bottom - top))
     }
 
     /// The thumb for `position`, or nil when there is nothing to scroll or no room to draw one.

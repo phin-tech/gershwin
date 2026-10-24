@@ -1,5 +1,16 @@
 import CoreGraphics
 
+/// The title bars of OS/2's window shape, which Windows shares (both come from Presentation Manager).
+public enum TitleBarStyle: Sendable {
+    /// Warp 4: the window's icon as the system menu, the title centred, hide, maximize and close buttons.
+    case warp
+    /// Windows 3.1: the control-menu box (a bar in a box), the title centred, minimize ▼ and maximize ▲, no close
+    /// button (the control menu closes).
+    case windows31
+    /// Windows 95: a small icon, the title at the left, and minimize, maximize and, apart, close.
+    case windows95
+}
+
 /// The sizes of an OS/2 Warp window's parts, in points, as Warp 4 drew them at its default resolution.
 public enum OS2Metrics {
     /// The sizing border around the whole window: drag it anywhere to resize. Thinner on a dialog and a palette.
@@ -38,33 +49,53 @@ public struct OS2ChromeLayout: Equatable, Sendable {
     /// Documents only: Warp 4's hide (minimize) and maximize buttons.
     public let hideButton: CGRect?
     public let maximizeButton: CGRect?
-    public let closeButton: CGRect
+    /// Nil for Windows 3.1, which had none.
+    public let closeButton: CGRect?
+    public let titleStyle: TitleBarStyle
     /// Inside the frame, below the title bar. Empty when collapsed.
     public let content: CGRect
     public let tabBar: CGRect?
     public let main: CGRect
     public let scrollBar: CGRect?
 
-    public init(bounds: CGRect, style: ClassicWindowStyle, isCollapsed: Bool = false, showsTabBar: Bool = false) {
+    public init(bounds: CGRect, style: ClassicWindowStyle, isCollapsed: Bool = false, showsTabBar: Bool = false,
+                titleBar titleStyle: TitleBarStyle = .warp) {
         typealias M = OS2Metrics
         self.bounds = bounds
         self.style = style
         self.isCollapsed = isCollapsed
+        self.titleStyle = titleStyle
         let frame = M.frameWidth(for: style)
         titleBar = CGRect(x: bounds.minX + frame, y: bounds.minY + frame,
                           width: max(0, bounds.width - frame * 2), height: M.titleBarHeight(for: style))
-        let size = M.buttonSize(for: style)
-        let y = titleBar.minY + 1
-        systemMenu = CGRect(x: titleBar.minX + 1, y: y, width: size, height: size)
-        let close = CGRect(x: titleBar.maxX - 1 - size, y: y, width: size, height: size)
-        closeButton = close
-        if style == .document {
-            let maximize = close.offsetBy(dx: -(size + M.closeGap), dy: 0)
-            maximizeButton = maximize
-            hideButton = maximize.offsetBy(dx: -size, dy: 0)
-        } else {
-            maximizeButton = nil
-            hideButton = nil
+        switch titleStyle {
+        case .warp, .windows31:
+            let size = M.buttonSize(for: style)
+            let y = titleBar.minY + 1
+            systemMenu = CGRect(x: titleBar.minX + 1, y: y, width: size, height: size)
+            let right = CGRect(x: titleBar.maxX - 1 - size, y: y, width: size, height: size)
+            if titleStyle == .windows31 {
+                // Minimize and maximize, side by side at the right; no close button.
+                closeButton = nil
+                maximizeButton = style == .document ? right : nil
+                hideButton = style == .document ? right.offsetBy(dx: -size, dy: 0) : nil
+            } else {
+                closeButton = right
+                let maximize = right.offsetBy(dx: -(size + M.closeGap), dy: 0)
+                maximizeButton = style == .document ? maximize : nil
+                hideButton = style == .document ? maximize.offsetBy(dx: -size, dy: 0) : nil
+            }
+        case .windows95:
+            // Smaller buttons, two pixels in, a gap before close; the icon a 16-pixel square.
+            let height = titleBar.height - 4, width = height + 2
+            let y = titleBar.minY + 2
+            systemMenu = CGRect(x: titleBar.minX + 2, y: titleBar.minY + (titleBar.height - 16) / 2, width: 16,
+                                height: 16)
+            let close = CGRect(x: titleBar.maxX - 2 - width, y: y, width: width, height: height)
+            closeButton = close
+            let maximize = close.offsetBy(dx: -(width + M.closeGap), dy: 0)
+            maximizeButton = style == .document ? maximize : nil
+            hideButton = style == .document ? maximize.offsetBy(dx: -width, dy: 0) : nil
         }
 
         content = isCollapsed ? .zero
@@ -93,12 +124,13 @@ public struct OS2ChromeLayout: Equatable, Sendable {
     /// The buttons at the right of the title bar, left to right.
     public var buttons: [CGRect] { [hideButton, maximizeButton, closeButton].compactMap { $0 } }
 
-    /// Where a title `textWidth` wide goes: centred in the title bar, kept clear of the buttons either side.
+    /// Where a title `textWidth` wide goes: centred in the title bar (Windows 95's beside the icon), kept clear of the
+    /// buttons either side.
     public func titleRect(textWidth: CGFloat, textHeight: CGFloat) -> CGRect {
-        let left = systemMenu.maxX + 6
-        let right = (buttons.first?.minX ?? closeButton.minX) - 6
+        let left = systemMenu.maxX + (titleStyle == .windows95 ? 3 : 6)
+        let right = (buttons.first?.minX ?? titleBar.maxX) - 6
         let width = min(textWidth, max(0, right - left))
-        let x = min(max(titleBar.midX - width / 2, left), right - width)
+        let x = titleStyle == .windows95 ? left : min(max(titleBar.midX - width / 2, left), right - width)
         return CGRect(x: x, y: titleBar.midY - textHeight / 2, width: width, height: textHeight)
     }
 }

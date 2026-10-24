@@ -7,8 +7,12 @@ public enum ChromeFamily: Sendable {
     /// BeOS's: a yellow tab only as wide as the title, on the top edge, over the desktop (BeOSChromeLayout).
     case beos
     /// OS/2 Warp's: a sizing border all round, a coloured title bar with the system menu at its left and the hide,
-    /// maximize and close buttons at its right (OS2ChromeLayout).
+    /// maximize and close buttons at its right (OS2ChromeLayout); Windows 3.1's and 95's too, which share it
+    /// (ChromeTheme.titleBar).
     case os2
+    /// The Amiga Workbench's: the title bar a drag bar between the close gadget and the zoom and depth gadgets, the
+    /// scroll bar and size gadget in the right border (AmigaChromeLayout).
+    case amiga
 }
 
 /// The sizes of a BeOS window's parts, in points, as BeOS R5 drew them.

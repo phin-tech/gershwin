@@ -48,7 +48,10 @@ public final class ClassicScrollBar: NSView {
     public override var isOpaque: Bool { true }
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    private var geometry: ScrollbarGeometry { ScrollbarGeometry(bounds: bounds) }
+    /// Both arrows at the bottom in the Amiga's themes, one at each end elsewhere.
+    private var geometry: ScrollbarGeometry {
+        ScrollbarGeometry(bounds: bounds, arrows: theme.chrome.family == .amiga ? .together : .atEnds)
+    }
 
     // MARK: Drawing
 

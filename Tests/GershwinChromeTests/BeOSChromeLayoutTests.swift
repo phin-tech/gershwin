@@ -91,5 +91,5 @@ private typealias M = BeOSMetrics
 @Test func builtInThemesHaveDistinctIdsAndNames() {
     #expect(Set(ChromeTheme.builtIn.map(\.id)).count == ChromeTheme.builtIn.count)
     #expect(Set(ChromeTheme.builtIn.map(\.name)).count == ChromeTheme.builtIn.count)
-    #expect(ChromeTheme.builtIn.filter(\.isDark).map(\.id) == ["hiTech", "beosDark", "os2Dark"])
+    #expect(ChromeTheme.builtIn.filter(\.isDark).map(\.id) == ["hiTech", "beosDark", "os2Dark", "workbench13"])
 }

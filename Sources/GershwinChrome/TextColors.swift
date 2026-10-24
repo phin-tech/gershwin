@@ -124,4 +124,30 @@ public struct TextColors: Hashable, Sendable {
     public static let os2Dark = TextColors(
         foreground: RGB(0xAAAAAA), background: RGB(0x000000), cursor: RGB(0xAAAAAA),
         selectionBackground: RGB(0x0000AA), selectionForeground: RGB(0xFFFFFF), ansi: cga)
+
+    /// An MS-DOS Prompt: CGA's grey on black, as Windows 3.1 and 95 showed one, the same as an OS/2 window's.
+    public static let msdos = os2Dark
+
+    /// A Workbench 3.1 Shell: black on the grey, the cursor and selection the blue, the rest an eight-colour
+    /// Workbench screen's, brightened for the bright eight.
+    public static let workbench = TextColors(
+        foreground: RGB(0x000000), background: RGB(0xAAAAAA), cursor: RGB(0x6688BB),
+        selectionBackground: RGB(0x6688BB), selectionForeground: RGB(0xFFFFFF),
+        ansi: [
+            RGB(0x000000), RGB(0xAA2222), RGB(0x227722), RGB(0x886600),
+            RGB(0x334488), RGB(0x884488), RGB(0x227788), RGB(0xFFFFFF),
+            RGB(0x555555), RGB(0xDD3333), RGB(0x339933), RGB(0xAA8800),
+            RGB(0x6688BB), RGB(0xBB55BB), RGB(0x339999), RGB(0xFFFFFF),
+        ])
+
+    /// A Workbench 1.3 Shell: white on blue, the cursor orange.
+    public static let workbench13 = TextColors(
+        foreground: RGB(0xFFFFFF), background: RGB(0x0055AA), cursor: RGB(0xFF8800),
+        selectionBackground: RGB(0xFF8800), selectionForeground: RGB(0x000000),
+        ansi: [
+            RGB(0x000022), RGB(0xFF6644), RGB(0x77DD66), RGB(0xFFCC33),
+            RGB(0xAACCFF), RGB(0xFF88CC), RGB(0x77DDDD), RGB(0xFFFFFF),
+            RGB(0x3366AA), RGB(0xFF8800), RGB(0xAAFF99), RGB(0xFFEE88),
+            RGB(0xCCE0FF), RGB(0xFFAADD), RGB(0xAAFFFF), RGB(0xFFFFFF),
+        ])
 }

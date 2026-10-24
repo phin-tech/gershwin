@@ -37,9 +37,12 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     public var textColors: TextColors
     /// The id of its pair in the other mode (Platinum's is Hi-Tech, BeOS's BeOS Dark), for following macOS.
     public var partner: String?
+    /// In the OS/2 family, whose title bar: Warp's, Windows 3.1's or Windows 95's.
+    public var titleBar: TitleBarStyle
 
     public init(id: String, name: String, family: ChromeFamily = .macintosh, tabStyle: TabStyle = .appearanceManager,
-                isDark: Bool = false, palette: Palette, textColors: TextColors? = nil, partner: String? = nil) {
+                isDark: Bool = false, palette: Palette, textColors: TextColors? = nil, partner: String? = nil,
+                titleBar: TitleBarStyle = .warp) {
         self.id = id
         self.name = name
         self.family = family
@@ -48,6 +51,7 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
         self.palette = palette
         self.textColors = textColors ?? TextColors(for: palette, isDark: isDark)
         self.partner = partner
+        self.titleBar = titleBar
     }
 
     /// A built-in theme by its id.
@@ -113,8 +117,23 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     public static let os2Dark = ChromeTheme(id: "os2Dark", name: "OS/2 Warp Dark", family: .os2, isDark: true,
                                             palette: .os2Dark, textColors: .os2Dark, partner: "os2")
 
+    /// Windows 3.1: grey, a navy title bar, the control-menu box; the text an MS-DOS Prompt's, grey on black.
+    public static let windows31 = ChromeTheme(id: "windows31", name: "Windows 3.1", family: .os2, palette: .windows31,
+                                              textColors: .msdos, titleBar: .windows31)
+    /// Windows 95: its two-level bevels, the title at the left of a navy bar, minimize, maximize and close.
+    public static let windows95 = ChromeTheme(id: "windows95", name: "Windows 95", family: .os2, palette: .windows95,
+                                              textColors: .msdos, titleBar: .windows95)
+    /// Workbench 3.1: grey windows, the active one blue; a Shell's black on grey.
+    public static let workbench = ChromeTheme(id: "workbench", name: "Workbench", family: .amiga, tabStyle: .folder,
+                                              palette: .workbench, textColors: .workbench, partner: "workbench13")
+    /// Workbench 1.3: blue, white and orange; a Shell's white on blue.
+    public static let workbench13 = ChromeTheme(id: "workbench13", name: "Workbench 1.3", family: .amiga,
+                                                tabStyle: .folder, isDark: true, palette: .workbench13,
+                                                textColors: .workbench13, partner: "workbench")
+
     public static let builtIn: [ChromeTheme] = [
         .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
+        .windows31, .windows95, .workbench, .workbench13,
     ]
 }
 
@@ -236,6 +255,42 @@ public struct Palette: Hashable, Sendable {
         titleTab: TitleTabColors(face: RGB(0x2A5CA8), light: RGB(0x5A86C8), dark: RGB(0x123366),
                                  inactiveFace: RGB(0x4A4A50), text: RGB(0xFFFFFF)))
 
+    /// Windows 3.1's default scheme: the 16-colour VGA greys, navy for the active title and the selection.
+    public static let windows31 = Palette(
+        background: RGB(0xC0C0C0), light: RGB(0xFFFFFF), dark: RGB(0x808080), border: RGB(0x000000),
+        well: RGB(0xC0C0C0), highlight: RGB(0x000080), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x808080), pinstripe: RGB(0xC0C0C0), thumb: RGB(0xC0C0C0),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0x000080), light: RGB(0x0000FF), dark: RGB(0x000040),
+                                 inactiveFace: RGB(0xFFFFFF), text: RGB(0xFFFFFF), inactiveText: RGB(0x000000)))
+
+    /// Windows 95's: the same greys, an inactive title in dark grey.
+    public static let windows95 = Palette(
+        background: RGB(0xC0C0C0), light: RGB(0xFFFFFF), dark: RGB(0x808080), border: RGB(0x000000),
+        well: RGB(0xC0C0C0), highlight: RGB(0x000080), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x808080), pinstripe: RGB(0xC0C0C0), thumb: RGB(0xC0C0C0),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0x000080), light: RGB(0x1084D0), dark: RGB(0x000040),
+                                 inactiveFace: RGB(0x808080), text: RGB(0xFFFFFF), inactiveText: RGB(0xC0C0C0)))
+
+    /// Workbench 2.0 and 3.1's four colours: grey, black, white and blue.
+    public static let workbench = Palette(
+        background: RGB(0xAAAAAA), light: RGB(0xFFFFFF), dark: RGB(0x000000), border: RGB(0x000000),
+        well: RGB(0x999999), highlight: RGB(0x6688BB), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x666666), pinstripe: RGB(0xAAAAAA), thumb: RGB(0xAAAAAA),
+        content: RGB(0xAAAAAA), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0x6688BB), light: RGB(0x99BBEE), dark: RGB(0x334466),
+                                 inactiveFace: RGB(0xAAAAAA), text: RGB(0x000000)))
+
+    /// Workbench 1.3's: blue, white, black and orange. Approximate in its details: drawn in 3.1's shapes.
+    public static let workbench13 = Palette(
+        background: RGB(0x0055AA), light: RGB(0xFFFFFF), dark: RGB(0x000022), border: RGB(0x000000),
+        well: RGB(0x003377), highlight: RGB(0xFF8800), text: RGB(0xFFFFFF), selectedText: RGB(0x000000),
+        disabledText: RGB(0x6688AA), pinstripe: RGB(0x0055AA), thumb: RGB(0xFFFFFF),
+        content: RGB(0x0055AA), contentText: RGB(0xFFFFFF),
+        titleTab: TitleTabColors(face: RGB(0xFFFFFF), light: RGB(0xFFFFFF), dark: RGB(0x888888),
+                                 inactiveFace: RGB(0x0055AA), text: RGB(0x0055AA), inactiveText: RGB(0xFFFFFF)))
+
     public static let beosDark = Palette(
         background: RGB(0x3A3A3C), light: RGB(0x58585B), dark: RGB(0x1E1E20), border: RGB(0x0C0C0C),
         well: RGB(0x2C2C2E), highlight: RGB(0x5C8DE0), text: RGB(0xE6E6E6), selectedText: RGB(0xFFFFFF),
@@ -255,12 +310,16 @@ public struct TitleTabColors: Hashable, Sendable {
     public var inactiveFace: RGB
     /// The title on the coloured face: black, even when the rest of the theme writes in light grey.
     public var text: RGB
+    /// The title on the inactive face; nil for the theme's text.
+    public var inactiveText: RGB?
 
-    public init(face: RGB, light: RGB, dark: RGB, inactiveFace: RGB, text: RGB = RGB(0x000000)) {
+    public init(face: RGB, light: RGB, dark: RGB, inactiveFace: RGB, text: RGB = RGB(0x000000),
+                inactiveText: RGB? = nil) {
         self.face = face
         self.light = light
         self.dark = dark
         self.inactiveFace = inactiveFace
         self.text = text
+        self.inactiveText = inactiveText
     }
 }

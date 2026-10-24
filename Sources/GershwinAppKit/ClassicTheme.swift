@@ -52,6 +52,10 @@ public struct ClassicTheme: Sendable, Equatable {
     public func font(size: CGFloat = 12) -> NSFont {
         // OS/2 Warp 4's titles and controls are in WarpSans Bold, which isn't free; Helvetica Bold stands in, as for BeOS.
         guard chrome.family != .macintosh else { return Self.systemFont(size: size) }
+        // The Amiga's Topaz isn't free either; Monaco, monospaced as it was, stands in.
+        if chrome.family == .amiga {
+            return NSFont(name: "Monaco", size: size) ?? .monospacedSystemFont(ofSize: size, weight: .regular)
+        }
         return NSFont(name: "Helvetica-Bold", size: size) ?? .boldSystemFont(ofSize: size)
     }
 

@@ -309,6 +309,7 @@ public final class ClassicFrameView: NSView {
         case .macintosh: let l = macLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         case .beos: let l = beLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.growBox)
         case .os2: let l = os2Layout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
+        case .amiga: let l = amigaLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.sizeGadget)
         }
     }
 
@@ -324,8 +325,15 @@ public final class ClassicFrameView: NSView {
     /// With `panesHaveScrollBars`, the bottom-right corner of `mainView` the panes' scroll bars stop short of, in
     /// Mac OS 9 pixels: a BeOS window's grow box. Zero for the Mac's, which is in the placard row below, and OS/2's.
     public var paneCorner: CGSize {
-        guard panesHaveScrollBars, family == .beos, let grow = beLayout.growBox else { return .zero }
-        return grow.size
+        guard panesHaveScrollBars else { return .zero }
+        switch family {
+        case .beos: return beLayout.growBox?.size ?? .zero
+        case .amiga:
+            // The size gadget, below the arrows in the right border.
+            guard let size = amigaLayout.sizeGadget else { return .zero }
+            return CGSize(width: size.width, height: max(0, mainRect.maxY - size.minY))
+        case .macintosh, .os2: return .zero
+        }
     }
 
     private func paneArea(main: CGRect, scrollBar: CGRect?, grow: CGRect?) -> CGRect {
@@ -352,8 +360,12 @@ public final class ClassicFrameView: NSView {
             let layout = BeOSChromeLayout(bounds: big, style: style, titleWidths: [0])
             main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: layout.growBox)
         case .os2:
-            let layout = OS2ChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+            let layout = OS2ChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar,
+                                         titleBar: theme.chrome.titleBar)
             main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: nil)
+        case .amiga:
+            let layout = AmigaChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+            main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: layout.sizeGadget)
         }
         let scale = theme.scale
         return NSSize(width: size.width + (big.width - main.width) * scale,
@@ -493,6 +505,7 @@ public final class ClassicFrameView: NSView {
         case .macintosh: style.collapsedHeight
         case .beos: BeOSMetrics.tabHeight(for: style)
         case .os2: OS2Metrics.collapsedHeight(for: style)
+        case .amiga: AmigaMetrics.collapsedHeight(for: style)
         }
     }
 
@@ -522,8 +535,8 @@ public final class ClassicFrameView: NSView {
     /// A utility window's title is small: Geneva 9, or for BeOS, a smaller bold.
     private var titleFont: NSFont {
         switch (family, style) {
-        case (.os2, .utility): theme.font(size: 9)
-        case (.os2, _): theme.font(size: 11)
+        case (.os2, .utility), (.amiga, .utility): theme.font(size: 9)
+        case (.os2, _), (.amiga, _): theme.font(size: 11)
         case (.beos, .utility): theme.font(size: 10)
         case (.macintosh, .utility): ClassicTheme.smallFont(size: 9)
         default: theme.font(size: 12)
@@ -540,7 +553,12 @@ public final class ClassicFrameView: NSView {
     }
 
     private var os2Layout: OS2ChromeLayout {
-        OS2ChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar)
+        OS2ChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar,
+                        titleBar: theme.chrome.titleBar)
+    }
+
+    private var amigaLayout: AmigaChromeLayout {
+        AmigaChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar)
     }
 
     private var beLayout: BeOSChromeLayout {
@@ -561,6 +579,10 @@ public final class ClassicFrameView: NSView {
             if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
         case .os2:
             let layout = os2Layout
+            if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
+            if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
+        case .amiga:
+            let layout = amigaLayout
             if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
             if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
         }
@@ -652,8 +674,9 @@ public final class ClassicFrameView: NSView {
             if let maximize = layout.maximizeButton, maximize.contains(point) {
                 return ("Maximize button: To make this window as large as the screen, or back, click here.", maximize)
             }
-            if layout.closeButton.contains(point) { return ("Close button: To close this window, click here.",
-                                                            layout.closeButton) }
+            if let close = layout.closeButton, close.contains(point) {
+                return ("Close button: To close this window, click here.", close)
+            }
             if layout.titleBar.contains(point) {
                 return ("Title bar: To move this window, drag here. To maximize it, double-click here.",
                         layout.titleBar)
@@ -664,6 +687,24 @@ public final class ClassicFrameView: NSView {
             if let rect = layout.scrollBar, rect.contains(point) { return (scroll, rect) }
             if !layout.content.contains(point) {
                 return ("Sizing border: To make this window larger or smaller, drag here.", bounds)
+            }
+            return nil
+        case .amiga:
+            let layout = amigaLayout
+            if layout.closeGadget.contains(point) {
+                return ("Close gadget: To close this window, click here.", layout.closeGadget)
+            }
+            if let zoom = layout.zoomGadget, zoom.contains(point) {
+                return ("Zoom gadget: To switch this window between its size and the whole screen, click here.", zoom)
+            }
+            if layout.depthGadget.contains(point) {
+                return ("Depth gadget: To send this window behind the others, or bring it to the front, click here.",
+                        layout.depthGadget)
+            }
+            if layout.titleBar.contains(point) { return ("Drag bar: To move this window, drag here.", layout.titleBar) }
+            if let rect = layout.scrollBar, rect.contains(point) { return (scroll, rect) }
+            if let rect = layout.sizeGadget, rect.contains(point) {
+                return ("Size gadget: To make this window larger or smaller, drag here.", rect)
             }
             return nil
         }
@@ -681,19 +722,41 @@ public final class ClassicFrameView: NSView {
         case .os2:
             drawOS2(os2Layout)
             return
+        case .amiga:
+            drawAmiga(amigaLayout)
+            return
         }
         if let grow = family == .macintosh ? macLayout.growBox : beLayout.growBox { drawGrowBox(grow) }
     }
 
     private func drawOS2(_ layout: OS2ChromeLayout) {
         let t = theme
-        // The sizing border: raised all round, the title bar and the content set into it.
+        // The sizing border: raised all round, the title bar and the content set into it. Windows 95's is its
+        // two-level bevel instead: light grey and black outside, white and dark grey inside.
         t.background.setFill()
         bounds.fill()
-        t.drawOutline(bounds)
-        t.drawRaisedBevel(bounds.insetBy(dx: 1, dy: 1))
         let inside = layout.isCollapsed ? layout.titleBar : layout.titleBar.union(layout.content)
-        t.drawSunkenBevel(inside.insetBy(dx: -1, dy: -1))
+        if layout.titleStyle == .windows95 {
+            drawEdge(bounds, topLeft: t.background, bottomRight: t.border)
+            drawEdge(bounds.insetBy(dx: 1, dy: 1), topLeft: t.light, bottomRight: t.dark)
+        } else {
+            t.drawOutline(bounds)
+            t.drawRaisedBevel(bounds.insetBy(dx: 1, dy: 1))
+            t.drawSunkenBevel(inside.insetBy(dx: -1, dy: -1))
+        }
+        if layout.titleStyle == .windows31 {
+            // Its sizing border's notches, marking off the corners.
+            t.border.setFill()
+            let f = OS2Metrics.frameWidth(for: style), c = layout.titleBar.height + f
+            for x in [bounds.minX + c, bounds.maxX - c] {
+                NSRect(x: x, y: bounds.minY, width: 1, height: f).fill()
+                NSRect(x: x, y: bounds.maxY - f, width: 1, height: f).fill()
+            }
+            for y in [bounds.minY + c, bounds.maxY - c] {
+                NSRect(x: bounds.minX, y: y, width: f, height: 1).fill()
+                NSRect(x: bounds.maxX - f, y: y, width: f, height: 1).fill()
+            }
+        }
 
         let colours = t.palette.titleTab
         (isActive ? colours.map { NSColor($0.face) } ?? t.highlight
@@ -702,25 +765,45 @@ public final class ClassicFrameView: NSView {
         let title = window?.title ?? ""
         let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
                                          textHeight: ceil(titleFont.ascender - titleFont.descender))
-        let ink = isActive ? colours.map { NSColor($0.text) } ?? t.selectedText : t.text
-        t.drawText(title, in: titleRect, font: titleFont, color: ink, alignment: .center)
+        let ink = isActive ? colours.map { NSColor($0.text) } ?? t.selectedText
+            : colours?.inactiveText.map { NSColor($0) } ?? t.text
+        t.drawText(title, in: titleRect, font: titleFont, color: ink,
+                   alignment: layout.titleStyle == .windows95 ? .left : .center)
 
-        drawOS2Button(layout.systemMenu, glyph: .systemMenu)
-        if let hide = layout.hideButton { drawOS2Button(hide, glyph: .hide) }
-        if let maximize = layout.maximizeButton { drawOS2Button(maximize, glyph: .zoom) }
-        drawOS2Button(layout.closeButton, glyph: .close)
+        drawOS2Button(layout.systemMenu, glyph: .systemMenu, titleStyle: layout.titleStyle)
+        if let hide = layout.hideButton { drawOS2Button(hide, glyph: .hide, titleStyle: layout.titleStyle) }
+        if let maximize = layout.maximizeButton {
+            drawOS2Button(maximize, glyph: .zoom, titleStyle: layout.titleStyle)
+        }
+        if let close = layout.closeButton { drawOS2Button(close, glyph: .close, titleStyle: layout.titleStyle) }
         if !layout.isCollapsed, layout.content.height > 0 {
             t.drawSunkenBevel(layout.content.insetBy(dx: -1, dy: -1))
         }
     }
 
-    /// A title bar button: a raised grey square, sunk while pressed, and its glyph in the middle.
-    private func drawOS2Button(_ rect: CGRect, glyph: Box) {
+    /// A bevel of one-pixel lines just inside `rect`.
+    private func drawEdge(_ rect: CGRect, topLeft: NSColor, bottomRight: NSColor) {
+        topLeft.setFill()
+        NSRect(x: rect.minX, y: rect.minY, width: rect.width - 1, height: 1).fill()
+        NSRect(x: rect.minX, y: rect.minY, width: 1, height: rect.height - 1).fill()
+        bottomRight.setFill()
+        NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1).fill()
+        NSRect(x: rect.maxX - 1, y: rect.minY, width: 1, height: rect.height).fill()
+    }
+
+    /// A title bar button: a raised grey square, sunk while pressed, and its glyph in the middle; in Windows' styles,
+    /// Windows' glyphs.
+    private func drawOS2Button(_ rect: CGRect, glyph: Box, titleStyle: TitleBarStyle) {
         let t = theme
         let pressed = pressedBox == glyph
+        let c = CGPoint(x: (rect.midX).rounded(.down) + (pressed ? 1 : 0), y: (rect.midY).rounded(.down) + (pressed ? 1 : 0))
+        switch titleStyle {
+        case .windows31: return drawWindows31Button(rect, glyph: glyph, pressed: pressed, center: c)
+        case .windows95: return drawWindows95Button(rect, glyph: glyph, pressed: pressed, center: c)
+        case .warp: break
+        }
         t.drawButtonFace(rect, pressed: pressed)
         let ink = t.text
-        let c = CGPoint(x: (rect.midX).rounded(.down) + (pressed ? 1 : 0), y: (rect.midY).rounded(.down) + (pressed ? 1 : 0))
         ink.setFill()
         switch glyph {
         case .systemMenu:
@@ -905,6 +988,140 @@ public final class ClassicFrameView: NSView {
         }
     }
 
+    /// Windows 3.1's: the control-menu box (a long bar with a shadow, in a grey box), and the minimize ▼ and
+    /// maximize ▲ buttons, raised.
+    private func drawWindows31Button(_ rect: CGRect, glyph: Box, pressed: Bool, center c: CGPoint) {
+        let t = theme
+        t.background.setFill()
+        rect.fill()
+        t.drawOutline(rect)
+        if glyph == .systemMenu {
+            t.dark.setFill()
+            NSRect(x: c.x - 5, y: c.y, width: 12, height: 3).fill()
+            t.light.setFill()
+            NSRect(x: c.x - 6, y: c.y - 1, width: 12, height: 3).fill()
+            t.drawOutline(NSRect(x: c.x - 6, y: c.y - 1, width: 12, height: 3))
+            return
+        }
+        if pressed { t.drawSunkenBevel(rect.insetBy(dx: 1, dy: 1)) } else {
+            drawEdge(rect.insetBy(dx: 1, dy: 1), topLeft: t.light, bottomRight: t.dark)
+            drawEdge(rect.insetBy(dx: 2, dy: 2), topLeft: t.light, bottomRight: t.dark)
+        }
+        t.border.setFill()
+        let down = glyph == .hide
+        for row in 0..<4 {
+            let w = CGFloat(7 - row * 2)
+            let y = down ? c.y - 1 + CGFloat(row) : c.y + 2 - CGFloat(row)
+            NSRect(x: c.x - w / 2 + 0.5, y: y, width: w, height: 1).fill()
+        }
+    }
+
+    /// Windows 95's: raised buttons with _, □ and ✕, and the window's icon, a little terminal.
+    private func drawWindows95Button(_ rect: CGRect, glyph: Box, pressed: Bool, center c: CGPoint) {
+        let t = theme
+        if glyph == .systemMenu {
+            NSColor.black.setFill()
+            rect.insetBy(dx: 1, dy: 2).fill()
+            t.light.setFill()
+            NSRect(x: rect.minX + 3, y: rect.minY + 5, width: 3, height: 1).fill()
+            NSRect(x: rect.minX + 4, y: rect.minY + 6, width: 3, height: 1).fill()
+            NSRect(x: rect.minX + 3, y: rect.minY + 7, width: 3, height: 1).fill()
+            NSRect(x: rect.minX + 8, y: rect.minY + 9, width: 4, height: 1).fill()
+            return
+        }
+        t.background.setFill()
+        rect.fill()
+        if pressed {
+            drawEdge(rect, topLeft: t.border, bottomRight: t.light)
+            drawEdge(rect.insetBy(dx: 1, dy: 1), topLeft: t.dark, bottomRight: t.background)
+        } else {
+            drawEdge(rect, topLeft: t.light, bottomRight: t.border)
+            drawEdge(rect.insetBy(dx: 1, dy: 1), topLeft: t.background, bottomRight: t.dark)
+        }
+        t.border.setFill()
+        switch glyph {
+        case .hide:
+            NSRect(x: c.x - 4, y: c.y + 2, width: 6, height: 2).fill()
+        case .zoom:
+            t.drawOutline(NSRect(x: c.x - 4, y: c.y - 4, width: 9, height: 8), color: t.border)
+            NSRect(x: c.x - 4, y: c.y - 4, width: 9, height: 2).fill()
+        case .close:
+            for i in 0..<6 {
+                NSRect(x: c.x - 3 + CGFloat(i), y: c.y - 3 + CGFloat(i), width: 2, height: 1).fill()
+                NSRect(x: c.x + 2 - CGFloat(i), y: c.y - 3 + CGFloat(i), width: 2, height: 1).fill()
+            }
+        default:
+            break
+        }
+    }
+
+    // MARK: Amiga
+
+    private func drawAmiga(_ layout: AmigaChromeLayout) {
+        let t = theme
+        let colours = t.palette.titleTab
+        // The active window's borders and drag bar in its colour (Workbench's blue), the rest in grey.
+        let frame = isActive ? colours.map { NSColor($0.face) } ?? t.highlight : t.background
+        frame.setFill()
+        bounds.fill()
+        drawEdge(bounds, topLeft: t.light, bottomRight: t.dark)
+        if !layout.isCollapsed, layout.content.height > 0 {
+            drawEdge(layout.content.insetBy(dx: -1, dy: -1), topLeft: t.dark, bottomRight: t.light)
+        }
+        drawEdge(layout.titleBar, topLeft: t.light, bottomRight: t.dark)
+        let title = window?.title ?? ""
+        let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
+                                         textHeight: ceil(titleFont.ascender - titleFont.descender))
+        let ink = isActive ? colours.map { NSColor($0.text) } ?? t.text
+            : colours?.inactiveText.map { NSColor($0) } ?? t.text
+        t.drawText(title, in: titleRect, font: titleFont, color: ink)
+        drawAmigaGadget(layout.closeGadget, glyph: .close, fill: frame)
+        if let zoom = layout.zoomGadget { drawAmigaGadget(zoom, glyph: .zoom, fill: frame) }
+        drawAmigaGadget(layout.depthGadget, glyph: .collapse, fill: frame)
+        if let size = layout.sizeGadget { drawAmigaGadget(size, glyph: .hide, fill: frame) }
+    }
+
+    /// A gadget: raised (sunk while held) on the frame's colour, its picture in black and white. `.collapse` is the
+    /// depth gadget, `.hide` the size gadget.
+    private func drawAmigaGadget(_ rect: CGRect, glyph: Box, fill: NSColor) {
+        let t = theme
+        let pressed = pressedBox == glyph
+        fill.setFill()
+        rect.fill()
+        if pressed { drawEdge(rect, topLeft: t.dark, bottomRight: t.light) } else {
+            drawEdge(rect, topLeft: t.light, bottomRight: t.dark)
+        }
+        let c = CGPoint(x: rect.midX.rounded(.down), y: rect.midY.rounded(.down))
+        switch glyph {
+        case .close:
+            // A small box with a dot in it.
+            t.drawOutline(NSRect(x: c.x - 3, y: c.y - 3, width: 7, height: 7), color: t.dark)
+            t.light.setFill()
+            NSRect(x: c.x - 2, y: c.y - 2, width: 5, height: 5).fill()
+            t.dark.setFill()
+            NSRect(x: c.x, y: c.y, width: 1, height: 1).fill()
+        case .zoom:
+            // A window in a window.
+            t.drawOutline(NSRect(x: c.x - 6, y: c.y - 4, width: 12, height: 9), color: t.dark)
+            t.light.setFill()
+            NSRect(x: c.x - 5, y: c.y - 3, width: 4, height: 3).fill()
+            t.drawOutline(NSRect(x: c.x - 6, y: c.y - 4, width: 6, height: 5), color: t.dark)
+        case .collapse:
+            // Two windows, the front one white over the black one behind.
+            t.drawOutline(NSRect(x: c.x - 6, y: c.y - 4, width: 8, height: 6), color: t.dark)
+            t.light.setFill()
+            NSRect(x: c.x - 2, y: c.y - 1, width: 8, height: 6).fill()
+            t.drawOutline(NSRect(x: c.x - 2, y: c.y - 1, width: 8, height: 6), color: t.dark)
+        case .hide:
+            // The size gadget: a box with a smaller one at its corner.
+            t.drawOutline(NSRect(x: c.x - 5, y: c.y - 3, width: 10, height: 7), color: t.dark)
+            t.light.setFill()
+            NSRect(x: c.x - 4, y: c.y - 2, width: 4, height: 3).fill()
+        case .systemMenu:
+            break
+        }
+    }
+
     // MARK: Mouse
 
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -916,7 +1133,32 @@ public final class ClassicFrameView: NSView {
         case .macintosh: macMouseDown(event, at: point, in: window)
         case .beos: beMouseDown(event, at: point, in: window)
         case .os2: os2MouseDown(event, at: point, in: window)
+        case .amiga: amigaMouseDown(event, at: point, in: window)
         }
+    }
+
+    private func amigaMouseDown(_ event: NSEvent, at point: CGPoint, in window: ClassicWindow) {
+        let layout = amigaLayout
+        if layout.closeGadget.contains(point) {
+            if track(.close, in: layout.closeGadget) { window.performClose(nil) }
+            return
+        }
+        if let zoom = layout.zoomGadget, zoom.contains(point) {
+            if track(.zoom, in: zoom) { window.zoom(nil) }
+            return
+        }
+        if layout.depthGadget.contains(point) {
+            // Workbench's depth gadget: the front window goes to the back; one behind comes to the front.
+            if track(.collapse, in: layout.depthGadget) {
+                if window.isKeyWindow { window.orderBack(nil) } else { window.makeKeyAndOrderFront(nil) }
+            }
+            return
+        }
+        if let size = layout.sizeGadget, size.contains(point) {
+            window.trackGrow(from: event)
+            return
+        }
+        window.performDrag(with: event)
     }
 
     private func os2MouseDown(_ event: NSEvent, at point: CGPoint, in window: ClassicWindow) {
@@ -926,8 +1168,8 @@ public final class ClassicFrameView: NSView {
             if event.clickCount == 2 { return window.performClose(nil) }
             return showSystemMenu(below: layout.systemMenu, in: window)
         }
-        if layout.closeButton.contains(point) {
-            if track(.close, in: layout.closeButton) { window.performClose(nil) }
+        if let close = layout.closeButton, close.contains(point) {
+            if track(.close, in: close) { window.performClose(nil) }
             return
         }
         if let maximize = layout.maximizeButton, maximize.contains(point) {

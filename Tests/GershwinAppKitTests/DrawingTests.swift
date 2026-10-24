@@ -48,8 +48,11 @@ private func frameView(_ style: ClassicWindowStyle, _ theme: ClassicTheme, size:
     return view
 }
 
+/// The themes whose windows are outlined, a bevel inside the outline: all but Windows 95's and the Amiga's.
+private let outlined = ClassicTheme.all.filter { $0.chrome.titleBar != .windows95 && $0.chrome.family != .amiga }
+
 @MainActor
-@Test(arguments: ClassicTheme.all)
+@Test(arguments: outlined)
 func windowIsOutlinedAndBevelled(theme: ClassicTheme) throws {
     let rep = try render(frameView(.panel, theme))
     let p = theme.palette
@@ -492,7 +495,8 @@ func anOS2WindowHasABlueTitleBarWhenActive(theme: ClassicTheme) throws {
     #expect(rep(Int(layout.titleBar.midX) - 60, Int(layout.titleBar.midY)) == face.face)
     #expect(rep(0, 0) == theme.palette.border)
     #expect(rep(2, 100) == theme.palette.background)   // the sizing border
-    #expect(rep(Int(layout.closeButton.minX), Int(layout.closeButton.midY)) == theme.palette.border)   // its outline
+    let close = try #require(layout.closeButton)
+    #expect(rep(Int(close.minX), Int(close.midY)) == theme.palette.border)   // its outline
 }
 
 // MARK: - Splits
@@ -585,4 +589,38 @@ func dividersAreDrawnInTheThemesWay(chrome: ChromeTheme) throws {
     let didClose = panes.split.closePane("p0")
     #expect(didClose && closed == ["p0"] && panes.split.focused == "p2")
     #expect(panes.split.tree.panes == ["p1", "p2"])
+}
+
+@MainActor
+@Test func windows95HasItsTwoLevelBevelAndTheAmigaItsOneEdge() throws {
+    let win95 = try render(frameView(.panel, ClassicTheme(.windows95)))
+    let p = Palette.windows95
+    #expect(win95(0, 0) == p.background && win95(299, 199) == p.border)   // light grey, then black, outside
+    #expect(win95(1, 1) == p.light && win95(298, 198) == p.dark)          // white, then dark grey, inside
+    let amiga = try render(frameView(.panel, ClassicTheme(.workbench)))
+    #expect(amiga(0, 100) == Palette.workbench.light && amiga(299, 100) == Palette.workbench.dark)
+}
+
+@MainActor
+@Test func windows31HasNoCloseButtonAndWindows95PutsItsTitleLeft() throws {
+    let w31 = OS2ChromeLayout(bounds: CGRect(x: 0, y: 0, width: 400, height: 300), style: .document,
+                              titleBar: .windows31)
+    #expect(w31.closeButton == nil && w31.hideButton != nil && w31.maximizeButton != nil)
+    #expect(w31.maximizeButton?.maxX == w31.titleBar.maxX - 1)
+    let w95 = OS2ChromeLayout(bounds: CGRect(x: 0, y: 0, width: 400, height: 300), style: .document,
+                              titleBar: .windows95)
+    #expect(w95.titleRect(textWidth: 40, textHeight: 12).minX == w95.systemMenu.maxX + 3)
+    #expect(w95.closeButton != nil)
+}
+
+@MainActor
+@Test func anAmigaWindowHasItsGadgetsAndItsArrowsTogether() throws {
+    let layout = AmigaChromeLayout(bounds: CGRect(x: 0, y: 0, width: 400, height: 300), style: .document)
+    #expect(layout.closeGadget.minX == 0 && layout.depthGadget.maxX == 400)
+    #expect(layout.zoomGadget?.maxX == layout.depthGadget.minX)
+    let bar = try #require(layout.scrollBar), size = try #require(layout.sizeGadget)
+    #expect(bar.maxY == size.minY && size.maxY == 300 && size.maxX == 400)
+    let geometry = ScrollbarGeometry(bounds: CGRect(x: 0, y: 0, width: 16, height: 200), arrows: .together)
+    #expect(geometry.downArrow.maxY == 200 && geometry.upArrow.maxY == geometry.downArrow.minY)
+    #expect(geometry.track.minY == 0 && geometry.track.maxY == geometry.upArrow.minY)
 }
