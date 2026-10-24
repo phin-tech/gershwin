@@ -108,11 +108,8 @@ public final class ClassicSplitView<PaneID: Hashable & Sendable & Codable>: NSVi
     /// only one pane, or one not in the tree.
     @discardableResult
     public func closePane(_ closing: PaneID) -> Bool {
-        let frame = bounds.size == .zero ? CGRect(x: 0, y: 0, width: 1000, height: 1000) : pixelBounds
-        let next = [SplitDirection.right, .left, .down, .up].lazy
-            .compactMap { self.tree.neighbor(of: closing, $0, in: frame, divider: self.style.thickness) }.first
-            ?? tree.panes.first { $0 != closing }
-        guard let next, tree.close(closing) else { return false }
+        // The typing goes to the pane that takes its space, as in iTerm2 and Ghostty.
+        guard let next = tree.heir(of: closing), tree.close(closing) else { return false }
         scrollBars.removeValue(forKey: closing)?.removeFromSuperview()
         positions[closing] = nil
         onClose?(closing)
@@ -217,7 +214,11 @@ public final class ClassicSplitView<PaneID: Hashable & Sendable & Codable>: NSVi
         return bar
     }
 
-    private var windowIsActive: Bool { window.map { $0.isKeyWindow || $0.isMainWindow } ?? false }
+    /// The window is frontmost (or its frame is drawn as if it were, for snapshots).
+    private var windowIsActive: Bool {
+        if let frame = (window as? ClassicWindow)?.frameView, frame.drawsAsActive { return true }
+        return window.map { $0.isKeyWindow || $0.isMainWindow } ?? false
+    }
 
     private func updateScrollBars() {
         for (id, bar) in scrollBars { bar.isActive = windowIsActive && id == focused }

@@ -57,6 +57,18 @@ public struct SplitTree<ID: Hashable & Sendable & Codable>: Equatable, Sendable,
         return true
     }
 
+    /// The pane that takes `pane`'s space when it closes: the first of the other side of its split. Nil for the last.
+    public func heir(of pane: ID) -> ID? {
+        Self.heir(of: pane, in: root)
+    }
+
+    private static func heir(of pane: ID, in node: Node) -> ID? {
+        guard case .split(_, let first, let second, _) = node else { return nil }
+        if first == .pane(pane) { return panes(in: second).first }
+        if second == .pane(pane) { return panes(in: first).last }
+        return heir(of: pane, in: first) ?? heir(of: pane, in: second)
+    }
+
     private static func replacing(_ pane: ID, in node: Node, with make: () -> Node) -> Node {
         switch node {
         case .pane(let id): id == pane ? make() : node

@@ -460,7 +460,12 @@ public final class ClassicFrameView: NSView {
     /// Draws the window as frontmost whatever its state, for tests and the debug driver's snapshots, which look at a
     /// copy of the app running in the background.
     public var drawsAsActive = false {
-        didSet { activeStateChanged() }
+        didSet {
+            activeStateChanged()
+            // Content that draws itself active or not with the window (a split view's scroll bars) follows.
+            mainView?.needsLayout = true
+            mainView?.subviews.forEach { $0.needsLayout = true }
+        }
     }
 
     /// Whether the window is frontmost, which is when Mac OS 9 draws its pinstripes, boxes and scroll bars, and BeOS

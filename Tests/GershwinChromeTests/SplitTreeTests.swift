@@ -83,3 +83,13 @@ private let area = CGRect(x: 0, y: 0, width: 205, height: 105)
     tree.split(tree.panes[0], along: .stacked, adding: b, fraction: 0.3)
     #expect(try JSONDecoder().decode(SplitTree<UUID>.self, from: JSONEncoder().encode(tree)) == tree)
 }
+
+@Test func aClosedPanesSpaceGoesToItsSplitsOtherSide() {
+    var tree = SplitTree(pane: "a")
+    tree.split("a", along: .sideBySide, adding: "b")
+    tree.split("b", along: .stacked, adding: "c")
+    #expect(tree.heir(of: "c") == "b")        // below b: b takes it
+    #expect(tree.heir(of: "b") == "c")
+    #expect(tree.heir(of: "a") == "b")        // the right column's first
+    #expect(SplitTree(pane: "z").heir(of: "z") == nil)
+}
