@@ -13,6 +13,9 @@ public enum ChromeFamily: Sendable {
     /// The Amiga Workbench's: the title bar a drag bar between the close gadget and the zoom and depth gadgets, the
     /// scroll bar and size gadget in the right border (AmigaChromeLayout).
     case amiga
+    /// Sun's OPEN LOOK: a border with resize corners, a header with the window menu button (or a pop-up's pushpin), an
+    /// elevator scroll bar (OpenLookChromeLayout).
+    case openLook
 }
 
 /// The sizes of a BeOS window's parts, in points, as BeOS R5 drew them.

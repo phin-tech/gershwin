@@ -133,8 +133,12 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
 
     public static let builtIn: [ChromeTheme] = [
         .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
-        .windows31, .windows95, .workbench, .workbench13,
+        .windows31, .windows95, .workbench, .workbench13, .openLook,
     ]
+
+    /// Sun's OPEN LOOK, as OpenWindows drew it: warm grey windows, the focused one's header darker; the text a
+    /// cmdtool's, black on white.
+    public static let openLook = ChromeTheme(id: "openLook", name: "OPEN LOOK", family: .openLook, palette: .openLook)
 }
 
 /// The colour tokens everything is drawn from, like NeoBrutalism's `NBTheme`: a window's frame and a push button
@@ -290,6 +294,15 @@ public struct Palette: Hashable, Sendable {
         content: RGB(0x0055AA), contentText: RGB(0xFFFFFF),
         titleTab: TitleTabColors(face: RGB(0xFFFFFF), light: RGB(0xFFFFFF), dark: RGB(0x888888),
                                  inactiveFace: RGB(0x0055AA), text: RGB(0x0055AA), inactiveText: RGB(0xFFFFFF)))
+
+    /// OpenWindows' greys, warm, and its blue for the selection. From memory of its defaults: approximate.
+    public static let openLook = Palette(
+        background: RGB(0xD0CCC4), light: RGB(0xFFFFFF), dark: RGB(0x8A867E), border: RGB(0x000000),
+        well: RGB(0xB8B4AC), highlight: RGB(0x3C6EA8), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x8A867E), pinstripe: RGB(0xD0CCC4), thumb: RGB(0xD0CCC4),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0xB8B4AC), light: RGB(0xFFFFFF), dark: RGB(0x8A867E),
+                                 inactiveFace: RGB(0xD0CCC4), text: RGB(0x000000)))
 
     public static let beosDark = Palette(
         background: RGB(0x3A3A3C), light: RGB(0x58585B), dark: RGB(0x1E1E20), border: RGB(0x0C0C0C),

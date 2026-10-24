@@ -180,17 +180,28 @@ open class ClassicWindow: NSWindow {
     /// new size on every mouse movement, and a shell that redraws its prompt for each (fish, with a right prompt)
     /// leaves the stale ones wrapped across the screen.
     func trackGrow(from event: NSEvent) {
+        trackResize(from: event, corner: .bottomRight)
+    }
+
+    /// The window's corners, for resizing from one (OPEN LOOK's resize corners).
+    enum Corner { case topLeft, topRight, bottomLeft, bottomRight }
+
+    /// As `trackGrow`, from any corner: the opposite one stays where it is.
+    func trackResize(from event: NSEvent, corner: Corner) {
         let start = NSEvent.mouseLocation
         let startFrame = frame
         let outline = ResizeOutline(frame: startFrame, theme: theme, style: frameView.style)
         outline.orderFront(nil)
         defer { outline.orderOut(nil) }
         var proposed = startFrame
+        let left = corner == .topLeft || corner == .bottomLeft, top = corner == .topLeft || corner == .topRight
         while let next = nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
             let now = NSEvent.mouseLocation
-            let width = max(minSize.width, startFrame.width + (now.x - start.x))
-            let height = max(minSize.height, startFrame.height - (now.y - start.y))
-            proposed = NSRect(x: startFrame.minX, y: startFrame.maxY - height, width: width, height: height)
+            let dx = now.x - start.x, dy = now.y - start.y
+            let width = max(minSize.width, startFrame.width + (left ? -dx : dx))
+            let height = max(minSize.height, startFrame.height + (top ? dy : -dy))
+            proposed = NSRect(x: left ? startFrame.maxX - width : startFrame.minX,
+                              y: top ? startFrame.minY : startFrame.maxY - height, width: width, height: height)
             outline.setFrame(proposed, display: true)
             if next.type == .leftMouseUp { break }
         }
@@ -310,6 +321,7 @@ public final class ClassicFrameView: NSView {
         case .beos: let l = beLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.growBox)
         case .os2: let l = os2Layout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         case .amiga: let l = amigaLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.sizeGadget)
+        case .openLook: let l = openLookLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         }
     }
 
@@ -332,7 +344,7 @@ public final class ClassicFrameView: NSView {
             // The size gadget, below the arrows in the right border.
             guard let size = amigaLayout.sizeGadget else { return .zero }
             return CGSize(width: size.width, height: max(0, mainRect.maxY - size.minY))
-        case .macintosh, .os2: return .zero
+        case .macintosh, .os2, .openLook: return .zero
         }
     }
 
@@ -366,6 +378,9 @@ public final class ClassicFrameView: NSView {
         case .amiga:
             let layout = AmigaChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
             main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: layout.sizeGadget)
+        case .openLook:
+            let layout = OpenLookChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+            main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: nil)
         }
         let scale = theme.scale
         return NSSize(width: size.width + (big.width - main.width) * scale,
@@ -506,6 +521,7 @@ public final class ClassicFrameView: NSView {
         case .beos: BeOSMetrics.tabHeight(for: style)
         case .os2: OS2Metrics.collapsedHeight(for: style)
         case .amiga: AmigaMetrics.collapsedHeight(for: style)
+        case .openLook: OpenLookMetrics.collapsedHeight(for: style)
         }
     }
 
@@ -535,8 +551,8 @@ public final class ClassicFrameView: NSView {
     /// A utility window's title is small: Geneva 9, or for BeOS, a smaller bold.
     private var titleFont: NSFont {
         switch (family, style) {
-        case (.os2, .utility), (.amiga, .utility): theme.font(size: 9)
-        case (.os2, _), (.amiga, _): theme.font(size: 11)
+        case (.os2, .utility), (.amiga, .utility), (.openLook, .utility): theme.font(size: 9)
+        case (.os2, _), (.amiga, _), (.openLook, _): theme.font(size: 11)
         case (.beos, .utility): theme.font(size: 10)
         case (.macintosh, .utility): ClassicTheme.smallFont(size: 9)
         default: theme.font(size: 12)
@@ -555,6 +571,10 @@ public final class ClassicFrameView: NSView {
     private var os2Layout: OS2ChromeLayout {
         OS2ChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar,
                         titleBar: theme.chrome.titleBar)
+    }
+
+    private var openLookLayout: OpenLookChromeLayout {
+        OpenLookChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar)
     }
 
     private var amigaLayout: AmigaChromeLayout {
@@ -583,6 +603,10 @@ public final class ClassicFrameView: NSView {
             if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
         case .amiga:
             let layout = amigaLayout
+            if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
+            if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
+        case .openLook:
+            let layout = openLookLayout
             if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
             if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
         }
@@ -707,6 +731,26 @@ public final class ClassicFrameView: NSView {
                 return ("Size gadget: To make this window larger or smaller, drag here.", rect)
             }
             return nil
+        case .openLook:
+            let layout = openLookLayout
+            if layout.button.contains(point) {
+                return layout.hasPushpin
+                    ? ("Pushpin: To put this window away, pull the pin out: click here.", layout.button)
+                    : ("Window menu button: To close, size or put this window behind the others, click here.",
+                       layout.button)
+            }
+            if let corner = layout.corner(at: point) {
+                return ("Resize corner: To make this window larger or smaller, drag here.", layout.corners[corner])
+            }
+            if layout.header.contains(point) {
+                return ("Header: To move this window, drag here. To make it full size, or back, double-click.",
+                        layout.header)
+            }
+            if let rect = layout.scrollBar, rect.contains(point) {
+                return ("Scrollbar: To scroll, click the elevator's arrows, drag it, or click the cable. To go to the "
+                        + "start or the end, click an anchor.", rect)
+            }
+            return nil
         }
     }
 
@@ -724,6 +768,9 @@ public final class ClassicFrameView: NSView {
             return
         case .amiga:
             drawAmiga(amigaLayout)
+            return
+        case .openLook:
+            drawOpenLook(openLookLayout)
             return
         }
         if let grow = family == .macintosh ? macLayout.growBox : beLayout.growBox { drawGrowBox(grow) }
@@ -1122,6 +1169,125 @@ public final class ClassicFrameView: NSView {
         }
     }
 
+    // MARK: OPEN LOOK
+
+    private func drawOpenLook(_ layout: OpenLookChromeLayout) {
+        let t = theme
+        let colours = t.palette.titleTab
+        t.background.setFill()
+        bounds.fill()
+        t.drawOutline(bounds)
+        drawEdge(bounds.insetBy(dx: 1, dy: 1), topLeft: t.light, bottomRight: t.dark)
+        // The resize corners: an L in each corner, raised.
+        for (i, corner) in layout.corners.enumerated() {
+            let b = OpenLookMetrics.border(for: style)
+            let right = i == 1 || i == 3, bottom = i >= 2
+            let horizontal = CGRect(x: corner.minX, y: bottom ? corner.maxY - b : corner.minY, width: corner.width,
+                                    height: b)
+            let vertical = CGRect(x: right ? corner.maxX - b : corner.minX, y: corner.minY, width: b,
+                                  height: corner.height)
+            for arm in [horizontal, vertical] {
+                t.well.setFill()
+                arm.fill()
+            }
+            for arm in [horizontal, vertical] { drawEdge(arm, topLeft: t.light, bottomRight: t.border) }
+        }
+        // The header: the focused window's darker.
+        (isActive ? colours.map { NSColor($0.face) } ?? t.well : t.background).setFill()
+        layout.header.fill()
+        t.dark.setFill()
+        NSRect(x: layout.header.minX, y: layout.header.maxY, width: layout.header.width, height: 1).fill()
+        let title = window?.title ?? ""
+        let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
+                                         textHeight: ceil(titleFont.ascender - titleFont.descender))
+        t.drawText(title, in: titleRect, font: titleFont, color: t.text, alignment: .center)
+        if layout.hasPushpin { drawPushpin(layout.button) } else { drawWindowMenuButton(layout.button) }
+        if !layout.isCollapsed, layout.content.height > 0 {
+            drawEdge(layout.content.insetBy(dx: -1, dy: -1), topLeft: t.dark, bottomRight: t.light)
+        }
+    }
+
+    /// The window menu button: a raised box with a triangle pointing down.
+    private func drawWindowMenuButton(_ rect: CGRect) {
+        let t = theme
+        let pressed = pressedBox == .systemMenu
+        t.background.setFill()
+        rect.fill()
+        drawEdge(rect, topLeft: pressed ? t.dark : t.light, bottomRight: pressed ? t.light : t.dark)
+        t.border.setFill()
+        let c = CGPoint(x: rect.midX.rounded(.down), y: rect.midY.rounded(.down))
+        // An outlined triangle, pointing down.
+        for row in 0..<5 {
+            let half = CGFloat(4 - row)
+            if row == 0 {
+                NSRect(x: c.x - half, y: c.y - 2, width: half * 2 + 1, height: 1).fill()
+            } else {
+                NSRect(x: c.x - half, y: c.y - 2 + CGFloat(row), width: 1, height: 1).fill()
+                NSRect(x: c.x + half, y: c.y - 2 + CGFloat(row), width: 1, height: 1).fill()
+            }
+        }
+    }
+
+    /// A pop-up's pushpin, pushed in: its head, and the shadow of its point.
+    private func drawPushpin(_ rect: CGRect) {
+        let t = theme
+        let c = CGPoint(x: rect.midX.rounded(.down), y: rect.midY.rounded(.down))
+        t.dark.setFill()
+        NSRect(x: c.x - 1, y: c.y + 2, width: 5, height: 1).fill()
+        let head = NSBezierPath(ovalIn: NSRect(x: c.x - 4, y: c.y - 4, width: 7, height: 7))
+        t.light.setFill()
+        head.fill()
+        t.border.setStroke()
+        head.lineWidth = 1
+        head.stroke()
+        t.dark.setFill()
+        NSRect(x: c.x - 1, y: c.y - 1, width: 2, height: 2).fill()
+    }
+
+    private func openLookMouseDown(_ event: NSEvent, at point: CGPoint, in window: ClassicWindow) {
+        let layout = openLookLayout
+        if layout.button.contains(point) {
+            // A pop-up's pushpin, pulled out, puts it away; a window's button opens its menu.
+            if layout.hasPushpin { return window.performClose(nil) }
+            return showWindowMenu(below: layout.button, in: window)
+        }
+        if let corner = layout.corner(at: point) {
+            let corners: [ClassicWindow.Corner] = [.topLeft, .topRight, .bottomLeft, .bottomRight]
+            window.trackResize(from: event, corner: corners[corner])
+            return
+        }
+        if layout.header.contains(point), event.clickCount == 2 {
+            window.zoom(nil)
+            return
+        }
+        window.performDrag(with: event)
+    }
+
+    /// OPEN LOOK's window menu: Close (to an icon), Full Size, Back, and Quit, which ends it.
+    private func showWindowMenu(below rect: CGRect, in window: ClassicWindow) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        let isFull = window.frame == (window.screen ?? NSScreen.main)?.visibleFrame
+        for (title, action) in [("Close", #selector(NSWindow.miniaturize(_:))),
+                                (isFull ? "Restore Size" : "Full Size", #selector(NSWindow.zoom(_:))),
+                                ("Back", #selector(NSWindow.orderBack(_:))),
+                                ("-", nil), ("Quit", #selector(NSWindow.performClose(_:)))] as [(String, Selector?)] {
+            guard let action else {
+                menu.addItem(.separator())
+                continue
+            }
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = window
+            menu.addItem(item)
+        }
+        pressedBox = .systemMenu
+        setNeedsDisplay(rect)
+        let onScreen = window.convertToScreen(convert(rect, to: nil))
+        ClassicMenu.popUp(menu, at: NSPoint(x: onScreen.minX, y: onScreen.minY), theme: theme)
+        pressedBox = nil
+        setNeedsDisplay(rect)
+    }
+
     // MARK: Mouse
 
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -1134,6 +1300,7 @@ public final class ClassicFrameView: NSView {
         case .beos: beMouseDown(event, at: point, in: window)
         case .os2: os2MouseDown(event, at: point, in: window)
         case .amiga: amigaMouseDown(event, at: point, in: window)
+        case .openLook: openLookMouseDown(event, at: point, in: window)
         }
     }
 

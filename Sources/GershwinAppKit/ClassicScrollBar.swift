@@ -48,9 +48,14 @@ public final class ClassicScrollBar: NSView {
     public override var isOpaque: Bool { true }
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Both arrows at the bottom in the Amiga's themes, one at each end elsewhere.
+    /// Both arrows at the bottom in the Amiga's themes, OPEN LOOK's elevator in its, one at each end elsewhere.
     private var geometry: ScrollbarGeometry {
-        ScrollbarGeometry(bounds: bounds, arrows: theme.chrome.family == .amiga ? .together : .atEnds)
+        let arrows: ScrollArrows = switch theme.chrome.family {
+        case .amiga: .together
+        case .openLook: .elevator
+        default: .atEnds
+        }
+        return ScrollbarGeometry(bounds: bounds, arrows: arrows)
     }
 
     // MARK: Drawing
@@ -65,6 +70,7 @@ public final class ClassicScrollBar: NSView {
             return
         }
         let position = position ?? ScrollPosition(total: 0, offset: 0, visible: 0)
+        if g.arrows == .elevator { return drawElevator(g, position: position) }
         let thumb = g.thumb(for: position)
 
         // The track: a well, shaded along its top and left.
@@ -91,6 +97,46 @@ public final class ClassicScrollBar: NSView {
         drawArrow(g.downArrow, pointingUp: false, pressed: pressed == .lineDown, enabled: thumb != nil)
 
         if let thumb { drawThumb(thumb) }
+    }
+
+    /// OPEN LOOK's: a cable between two anchors, the part shown darkened on it, and the elevator riding it, its up,
+    /// drag and down parts in one raised box.
+    private func drawElevator(_ g: ScrollbarGeometry, position: ScrollPosition) {
+        let t = theme
+        t.background.setFill()
+        bounds.fill()
+        let cable = CGRect(x: (g.track.midX - ElevatorMetrics.cable / 2).rounded(.down), y: g.track.minY,
+                           width: ElevatorMetrics.cable, height: g.track.height)
+        t.well.setFill()
+        cable.fill()
+        t.drawOutline(cable, color: t.dark)
+        if let shown = g.proportion(for: position) {
+            t.border.setFill()
+            shown.fill()
+        }
+        for (anchor, part) in [(g.topAnchor, ScrollbarPart.toStart), (g.bottomAnchor, .toEnd)] {
+            t.drawButtonFace(anchor, pressed: pressed == part)
+        }
+        let elevator = g.elevator(for: position)
+        let enabled = position.canScroll
+        t.drawButtonFace(elevator, pressed: false)
+        let up = g.upArrow(for: position), down = g.downArrow(for: position)
+        if pressed == .lineUp { t.drawSunkenBevel(up.insetBy(dx: 1, dy: 1)) }
+        if pressed == .lineDown { t.drawSunkenBevel(down.insetBy(dx: 1, dy: 1)) }
+        if pressed == .thumb { t.drawSunkenBevel(CGRect(x: up.minX + 1, y: up.maxY, width: up.width - 2,
+                                                        height: down.minY - up.maxY)) }
+        t.dark.setFill()
+        NSRect(x: elevator.minX + 2, y: up.maxY, width: elevator.width - 4, height: 1).fill()
+        NSRect(x: elevator.minX + 2, y: down.minY - 1, width: elevator.width - 4, height: 1).fill()
+        let ink = enabled ? t.border : t.disabledText
+        ink.setFill()
+        for (rect, pointingUp) in [(up, true), (down, false)] {
+            let midX = rect.midX.rounded(.down), top = (rect.midY - 2).rounded(.down)
+            for row in 0..<4 {
+                let half = CGFloat(pointingUp ? row : 3 - row)
+                NSRect(x: midX - half, y: top + CGFloat(row), width: half * 2 + 1, height: 1).fill()
+            }
+        }
     }
 
     private func drawArrow(_ rect: CGRect, pointingUp: Bool, pressed: Bool, enabled: Bool) {
@@ -142,6 +188,8 @@ public final class ClassicScrollBar: NSView {
         case .pageUp: .pages(-1)
         case .pageDown: .pages(1)
         case .thumb: nil
+        case .toStart: .offset(0)
+        case .toEnd: position.map { .offset($0.maxOffset) }
         }
     }
 
