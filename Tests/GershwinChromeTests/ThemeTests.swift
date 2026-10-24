@@ -80,3 +80,12 @@ func turningFollowingOffAndOnKeepsEveryChoice(systemIsDark: Bool) {
     let partial = try JSONDecoder().decode(ThemeChoice.self, from: Data(#"{"theme": "aqua", "followsSystem": true}"#.utf8))
     #expect(partial == ThemeChoice(theme: .platinum, followsSystem: true))
 }
+
+@Test func turningFollowingOffAndOnKeepsAModeNotChosenAsItWas() {
+    // Gizmo has no dark partner, so dark is Hi-Tech; choose OS/2 Warp Dark for it, light never chosen.
+    var choice = ThemeChoice(theme: .gizmo, dark: .os2Dark, followsSystem: true)
+    choice.setFollowsSystem(false, systemIsDark: true)
+    #expect(choice.theme == .os2Dark)
+    choice.setFollowsSystem(true, systemIsDark: true)
+    #expect(choice.lightTheme() == .gizmo && choice.darkTheme() == .os2Dark)
+}

@@ -53,7 +53,12 @@ public struct ThemeChoice: Hashable, Sendable, Codable {
     public mutating func setFollowsSystem(_ on: Bool, systemIsDark: Bool,
                                           among themes: [ChromeTheme] = ChromeTheme.builtIn) {
         guard on != followsSystem else { return }
-        if !on { theme = theme(systemIsDark: systemIsDark, among: themes) }
+        if !on {
+            // Each mode's theme as it is now, before the theme changes under the ones that come from its partners.
+            light = lightTheme(among: themes)
+            dark = darkTheme(among: themes)
+            theme = theme(systemIsDark: systemIsDark, among: themes)
+        }
         followsSystem = on
     }
 
