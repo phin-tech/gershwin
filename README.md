@@ -12,7 +12,7 @@ app can make its own.
 
 - **GershwinChrome**: plain values, no AppKit, tested headless. The themes (`ChromeTheme.builtIn`, found and saved
   by id): their colour tokens (`Palette`), the colours of the text they show (`TextColors`: a terminal's sixteen, or a
-  code view's), and their pairs for the other mode; `ThemeChoice`, a theme, or a light and a dark one while following
+  code view's, read from a Ghostty theme file too), and their pairs for the other mode; `ThemeChoice`, a theme, or a light and a dark one while following
   macOS, each kept as chosen. And the geometry of every part: a Mac window's title bar, boxes, scroll bar, placard and grow box (`WindowChromeLayout`), a
   BeOS window's sliding title tabs (`BeOSChromeLayout`), an OS/2 window's title bar and buttons (`OS2ChromeLayout`), a proportional scroll thumb (`ScrollbarGeometry`), and tabs
   (`TabList`, `TabStripLayout`).
