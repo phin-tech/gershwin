@@ -23,7 +23,10 @@ app can make its own.
   - `ClassicPopUpButton`, `ClassicButton` (with the default button's ring), `ClassicProgressBar` (and System 7's
     barber pole), `ClassicAlert` (Stop, Caution and Note), and Balloon Help (`ClassicBalloon`), which a window's
     frame uses to explain its own parts.
-  - Utility windows (`.utility`): a thin title bar and small boxes, or BeOS's smaller tab.
+  - Utility windows (`.utility`): a thin title bar and small boxes, or BeOS's smaller tab. They float over the
+    document they work on, which stays the main window.
+  - A progress bar in a document window's placard (`placardProgress`), and Mac OS 8's drop highlight
+    (`ClassicDropHighlight`), to show over a view while something dragged over it can drop there.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,
   `GroupBox` and `DisclosureGroup` beneath it, the way [NeoBrutalism](https://github.com/rational-kunal/NeoBrutalism)
   does, plus, for what SwiftUI won't let be styled, `ClassicPopUp`, `ClassicRadioGroup`, `ClassicSlider`,

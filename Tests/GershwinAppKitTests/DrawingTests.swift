@@ -283,8 +283,20 @@ func writeGallery() throws {
         controls.frameView.mainView = NSHostingView(rootView: GalleryControls().gershwin(theme))
         controls.setContentSize(controls.frameSize(forContentSize: controls.frameView.mainView!.fittingSize))
         controls.contentView?.layoutSubtreeIfNeeded()
+        let document = ClassicWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 140), style: .document,
+                                     theme: theme)
+        document.title = "make"
+        document.frameView.drawsAsActive = true
+        document.frameView.placardText = "80 × 24  ·  ~/src"
+        document.frameView.placardProgress = .fraction(0.4)
+        let drop = ClassicDropHighlight(theme: theme)
+        drop.isHidden = false
+        drop.frame = NSRect(x: 0, y: 0, width: 300, height: 140)
+        document.frameView.mainView = drop
+        document.contentView?.layoutSubtreeIfNeeded()
         let all = pieces + [("alert", alertView), ("progress", progress), ("pole", pole), ("balloon", balloon),
-                            ("utility", utility.contentView!), ("controls", controls.contentView!)]
+                            ("utility", utility.contentView!), ("controls", controls.contentView!),
+                            ("document", document.contentView!)]
         for (name, view) in all {
             let rep = NSBitmapImageRep(cgImage: try renderImage(view))
             try rep.representation(using: .png, properties: [:])!.write(to: folder.appendingPathComponent(
@@ -365,4 +377,40 @@ private struct GalleryControls: View {
         }
         .padding(12)
     }
+}
+
+@MainActor
+@Test func placardShowsProgressAtItsRight() throws {
+    let view = frameView(.document, .platinum)
+    view.drawsAsActive = true
+    let placard = try #require(WindowChromeLayout(bounds: view.bounds, style: .document).placard)
+    let row = Int(placard.midY)
+    #expect(try render(view)(Int(placard.maxX) - 10, row) == Palette.platinum.background)
+    view.placardProgress = .fraction(1)
+    // A third of the placard, 4 pixels in from its right, filled with the highlight inside the well.
+    #expect(try render(view)(Int(placard.maxX) - 10, row) == Palette.platinum.highlight)
+}
+
+@MainActor
+@Test(arguments: [(ChromeTheme.platinum, Palette.platinum.highlight), (.system7, Palette.system7.border)]
+      as [(ChromeTheme, RGB)])
+func dropHighlightIsABandInsideTheEdge(chrome: ChromeTheme, color: RGB) throws {
+    let highlight = ClassicDropHighlight(theme: ClassicTheme(chrome))
+    highlight.frame = NSRect(x: 0, y: 0, width: 100, height: 60)
+    let rep = try render(highlight)
+    #expect(rep.alpha(0, 30) == 0)
+    #expect(rep(1, 30) == color)
+    #expect(rep(2, 30) == color)
+    #expect(rep.alpha(3, 30) == 0)
+    #expect(rep.alpha(50, 30) == 0)
+    #expect(highlight.hitTest(NSPoint(x: 50, y: 30)) == nil)
+}
+
+@MainActor
+@Test func utilityWindowLeavesTheDocumentMain() {
+    let utility = ClassicWindow(contentRect: .zero, style: .utility, theme: .platinum)
+    let panel = ClassicWindow(contentRect: .zero, style: .panel, theme: .platinum)
+    #expect(!utility.canBecomeMain)
+    #expect(panel.canBecomeMain)
+    #expect(utility.canBecomeKey)
 }

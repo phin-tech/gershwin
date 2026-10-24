@@ -73,7 +73,8 @@ open class ClassicWindow: NSWindow {
     }
 
     open override var canBecomeKey: Bool { true }
-    open override var canBecomeMain: Bool { true }
+    /// A utility window floats over the document it works on, which stays the main window and drawn as active.
+    open override var canBecomeMain: Bool { frameView.style != .utility }
 
     open override var title: String {
         didSet { frameView.titleChanged() }
@@ -351,6 +352,36 @@ public final class ClassicFrameView: NSView {
     /// What Balloon Help says about the placard: what it shows is the app's to say.
     public var placardHelp: String?
 
+    /// A progress bar at the placard's right, for something going on in the window; nil for none.
+    public var placardProgress: ClassicProgress? {
+        didSet {
+            guard placardProgress != oldValue else { return }
+            needsDisplay = true
+            updateProgressTimer()
+        }
+    }
+
+    private var progressPhase: CGFloat = 0
+    private var progressTimer: Timer?
+
+    /// The barber pole moves while it shows; nothing ticks otherwise.
+    private func updateProgressTimer() {
+        let animate = placardProgress == .indeterminate && window != nil && family == .macintosh
+        if animate, progressTimer == nil {
+            progressTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let placard = self.macLayout.placard else { return }
+                    self.progressPhase = (self.progressPhase + 1)
+                        .truncatingRemainder(dividingBy: ClassicProgressBar.stripe * 2)
+                    self.setNeedsDisplay(placard)
+                }
+            }
+        } else if !animate {
+            progressTimer?.invalidate()
+            progressTimer = nil
+        }
+    }
+
     var isCollapsed = false {
         didSet {
             mainView?.isHidden = isCollapsed
@@ -477,6 +508,7 @@ public final class ClassicFrameView: NSView {
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         activeStateChanged()
+        updateProgressTimer()
     }
 
     // MARK: Balloon Help
@@ -625,7 +657,15 @@ public final class ClassicFrameView: NSView {
         rect.fill()
         t.drawOutline(rect)
         t.drawRaisedBevel(rect.insetBy(dx: 1, dy: 1))
-        t.drawText(placardText, in: rect.insetBy(dx: 6, dy: 0), font: ClassicTheme.smallFont(size: 10),
+        var textRect = rect.insetBy(dx: 6, dy: 0)
+        if let placardProgress {
+            // At the right, a third of the placard up to 100 pixels, its text in what's left.
+            let width = min(100, floor(rect.width / 3))
+            let bar = NSRect(x: rect.maxX - 4 - width, y: rect.minY + 3, width: width, height: rect.height - 6)
+            ClassicProgressBar.draw(value: placardProgress.fraction, phase: progressPhase, in: bar, theme: t)
+            textRect.size.width = max(0, bar.minX - 6 - textRect.minX)
+        }
+        t.drawText(placardText, in: textRect, font: ClassicTheme.smallFont(size: 10),
                    color: isActive ? t.text : t.disabledText)
     }
 

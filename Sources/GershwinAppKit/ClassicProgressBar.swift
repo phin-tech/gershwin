@@ -1,6 +1,17 @@
 import AppKit
 import GershwinChrome
 
+/// How far along something is, for a bar that shows it: a fraction from 0 to 1, or not known (the barber pole).
+public enum ClassicProgress: Equatable, Sendable {
+    case fraction(Double)
+    case indeterminate
+
+    /// The fraction, or nil for the barber pole, as ClassicProgressBar's `value` has it.
+    public var fraction: Double? {
+        if case .fraction(let value) = self { value } else { nil }
+    }
+}
+
 /// A progress bar in the theme's style: Mac OS 8 and 9's sunken well with a bevelled bar in the highlight colour;
 /// System 7's outlined white track filled in dark grey; BeOS's status bar in blue. When how far along isn't known, the
 /// barber pole that System 7 introduced: diagonal stripes, moving.
@@ -22,7 +33,6 @@ public final class ClassicProgressBar: NSView {
     /// Sizes in Mac OS 9 pixels.
     private enum Metrics {
         static let height: CGFloat = 12
-        static let stripe: CGFloat = 8
     }
 
     public init(value: Double? = 0, theme: ClassicTheme) {
@@ -61,7 +71,7 @@ public final class ClassicProgressBar: NSView {
             timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self else { return }
-                    self.phase = (self.phase + 1).truncatingRemainder(dividingBy: Metrics.stripe * 2)
+                    self.phase = (self.phase + 1).truncatingRemainder(dividingBy: Self.stripe * 2)
                     self.needsDisplay = true
                 }
             }
@@ -71,20 +81,21 @@ public final class ClassicProgressBar: NSView {
         }
     }
 
-    private var style: MenuStyle { MenuStyle(theme.chrome) }
-
-    /// The bar's own colour: the highlight, black for System 1 and 7, and blue for BeOS.
-    private var fill: NSColor {
-        switch style {
-        case .platinum: theme.highlight
-        case .classic: theme.border
-        case .beos: NSColor(srgbRed: 0.31, green: 0.5, blue: 0.85, alpha: 1)
-        }
+    public override func draw(_ dirtyRect: NSRect) {
+        Self.draw(value: value, phase: phase,
+                  in: NSRect(x: 0, y: 0, width: floor(bounds.width), height: Metrics.height), theme: theme)
     }
 
-    public override func draw(_ dirtyRect: NSRect) {
-        let t = theme
-        let track = NSRect(x: 0, y: 0, width: floor(bounds.width), height: Metrics.height)
+    /// Draws a bar, its track filling `track` (Mac OS 9 pixels), for ClassicProgressBar and the parts of a window
+    /// that show one of their own, like the placard. `phase` moves the barber pole.
+    static func draw(value: Double?, phase: CGFloat, in track: NSRect, theme t: ClassicTheme) {
+        let style = MenuStyle(t.chrome)
+        // The bar's own colour: the highlight, black for System 1 and 7, and blue for BeOS.
+        let fill: NSColor = switch style {
+        case .platinum: t.highlight
+        case .classic: t.border
+        case .beos: NSColor(srgbRed: 0.31, green: 0.5, blue: 0.85, alpha: 1)
+        }
         // The track.
         switch style {
         case .platinum:
@@ -123,15 +134,18 @@ public final class ClassicProgressBar: NSView {
             light.setFill()
             inside.fill()
             fill.setFill()
-            let period = Metrics.stripe * 2
+            let period = stripe * 2
             for row in 0..<Int(inside.height) {
                 var x = inside.minX - period + phase - CGFloat(row)
                 while x < inside.maxX {
-                    NSRect(x: x, y: inside.minY + CGFloat(row), width: Metrics.stripe, height: 1).fill()
+                    NSRect(x: x, y: inside.minY + CGFloat(row), width: stripe, height: 1).fill()
                     x += period
                 }
             }
         }
         NSGraphicsContext.restoreGraphicsState()
     }
+
+    /// The barber pole's stripe width, in pixels; its phase runs from 0 to twice this.
+    static let stripe: CGFloat = 8
 }
