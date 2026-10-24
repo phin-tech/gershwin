@@ -143,13 +143,14 @@ public struct SplitTree<ID: Hashable & Sendable & Codable>: Equatable, Sendable,
     // MARK: Moving between panes
 
     /// The pane next to `pane` in `direction`, in a layout: of those beyond its edge that overlap it, the nearest,
-    /// and of those the one most beside it.
+    /// and of those the one most beside it, and of those the first, left to right and top to bottom.
     public func neighbor(of pane: ID, _ direction: SplitDirection, in rect: CGRect, divider thickness: CGFloat) -> ID? {
         let frames = layout(in: rect, divider: thickness).frames
         guard let from = frames[pane] else { return nil }
         func overlap(_ a: CGFloat, _ b: CGFloat, _ c: CGFloat, _ d: CGFloat) -> CGFloat { max(0, min(b, d) - max(a, c)) }
-        let candidates: [(ID, distance: CGFloat, shared: CGFloat)] = frames.compactMap { id, frame in
-            guard id != pane else { return nil }
+        // In the tree's order, so a tie always goes the same way (min keeps the first of equals).
+        let candidates: [(ID, distance: CGFloat, shared: CGFloat)] = panes.compactMap { id in
+            guard id != pane, let frame = frames[id] else { return nil }
             switch direction {
             case .left where frame.maxX <= from.minX:
                 return (id, from.minX - frame.maxX, overlap(frame.minY, frame.maxY, from.minY, from.maxY))
