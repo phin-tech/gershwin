@@ -35,53 +35,48 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
 }
 
 @Test func followingMacOSShowsTheDarkThemeOnlyInDarkMode() {
-    let following = ThemeChoice(light: .system7, dark: .beos, followsSystem: true)
+    let following = ThemeChoice(theme: .gizmo, light: .system7, dark: .beos, followsSystem: true)
     #expect(following.theme(systemIsDark: false) == .system7)
     #expect(following.theme(systemIsDark: true) == .beos)
-    #expect(ThemeChoice(light: .system7, dark: .beos).theme(systemIsDark: true) == .system7)
+    #expect(ThemeChoice(theme: .gizmo, light: .system7, dark: .beos).theme(systemIsDark: true) == .gizmo)
+}
+
+@Test func aModeNotChosenYetGetsTheThemesPartner() {
+    #expect(ThemeChoice(theme: .beos, followsSystem: true).theme(systemIsDark: true) == .beosDark)
+    #expect(ThemeChoice(theme: .os2Dark, followsSystem: true).theme(systemIsDark: false) == .os2)
+    #expect(ThemeChoice(theme: .platinum, followsSystem: true).theme(systemIsDark: true) == .hiTech)
+    // No partner of its own: Hi-Tech, only until a dark one is chosen.
+    #expect(ThemeChoice(theme: .gizmo, followsSystem: true).theme(systemIsDark: true) == .hiTech)
+    #expect(ThemeChoice(theme: .gizmo, dark: .os2Dark, followsSystem: true).theme(systemIsDark: true) == .os2Dark)
 }
 
 @Test func choosingWhileFollowingSetsTheCurrentModesTheme() {
-    var choice = ThemeChoice(light: .platinum, dark: .hiTech, followsSystem: true)
-    choice.choose(.gizmo, systemIsDark: true)
-    #expect(choice.dark == .gizmo && choice.light == .platinum)
+    var choice = ThemeChoice(theme: .platinum, followsSystem: true)
+    choice.choose(.beosDark, systemIsDark: true)
+    #expect(choice.dark == .beosDark && choice.light == nil && choice.theme == .platinum)
     choice.choose(.system1, systemIsDark: false)
     #expect(choice.light == .system1)
     var fixed = ThemeChoice()
     fixed.choose(.beos, systemIsDark: true)
-    #expect(fixed.light == .beos)
+    #expect(fixed.theme == .beos && fixed.dark == nil)
 }
 
 @Test(arguments: [false, true])
-func turningFollowingOnPutsTheThemeInUseInItsOwnModesSlot(systemIsDark: Bool) {
-    for theme in ChromeTheme.builtIn {
-        var choice = ThemeChoice(light: theme)
-        choice.setFollowsSystem(true, systemIsDark: systemIsDark)
-        #expect(choice.followsSystem)
-        if theme.isDark {
-            #expect(choice.dark == theme && !choice.light.isDark, "\(theme.id)")
-        } else {
-            #expect(choice.light == theme && choice.dark.isDark, "\(theme.id)")
-        }
-    }
-}
-
-@Test func followingFromADarkThemePairsItWithItsLightOne() {
-    var choice = ThemeChoice(light: .beosDark)
-    choice.setFollowsSystem(true, systemIsDark: true)
-    #expect(choice.dark == .beosDark && choice.light == .beos)
-    #expect(choice.theme(systemIsDark: true) == .beosDark)
-}
-
-@Test func turningFollowingOffKeepsTheThemeShowing() {
-    var choice = ThemeChoice(light: .beos, dark: .beosDark, followsSystem: true)
-    choice.setFollowsSystem(false, systemIsDark: true)
-    #expect(choice.light == .beosDark && !choice.followsSystem)
+func turningFollowingOffAndOnKeepsEveryChoice(systemIsDark: Bool) {
+    var choice = ThemeChoice(theme: .drawingBoard, light: .system7, dark: .os2Dark, followsSystem: true)
+    let showing = choice.theme(systemIsDark: systemIsDark)
+    choice.setFollowsSystem(false, systemIsDark: systemIsDark)
+    #expect(choice.theme == showing)   // nothing changes on screen
+    choice.setFollowsSystem(true, systemIsDark: systemIsDark)
+    #expect(choice.light == .system7 && choice.dark == .os2Dark)
+    #expect(choice.theme(systemIsDark: systemIsDark) == showing)
 }
 
 @Test func aChoiceIsSavedByThemeIdsAndReadBackLeniently() throws {
-    let choice = ThemeChoice(light: .drawingBoard, dark: .beos, followsSystem: true)
-    #expect(try JSONDecoder().decode(ThemeChoice.self, from: JSONEncoder().encode(choice)) == choice)
-    let partial = try JSONDecoder().decode(ThemeChoice.self, from: Data(#"{"light": "aqua", "followsSystem": true}"#.utf8))
-    #expect(partial == ThemeChoice(light: .platinum, dark: .hiTech, followsSystem: true))
+    let choice = ThemeChoice(theme: .drawingBoard, dark: .beos, followsSystem: true)
+    let text = String(decoding: try JSONEncoder().encode(choice), as: UTF8.self)
+    #expect(!text.contains("light"))   // not chosen: left out
+    #expect(try JSONDecoder().decode(ThemeChoice.self, from: Data(text.utf8)) == choice)
+    let partial = try JSONDecoder().decode(ThemeChoice.self, from: Data(#"{"theme": "aqua", "followsSystem": true}"#.utf8))
+    #expect(partial == ThemeChoice(theme: .platinum, followsSystem: true))
 }

@@ -3,7 +3,7 @@ import GershwinChrome
 import SwiftUI
 
 /// A settings pane's theme controls, for a ThemeChoice: a pop-up of the themes, or while following macOS one for light
-/// and one for dark, and the checkbox that turns following on (keeping what's showing). Labels are right-aligned in a
+/// and one for dark (each kept when following is turned off and on), and the checkbox that turns following on. Labels are right-aligned in a
 /// column `labelWidth` wide (in Mac OS 9 pixels), as Mac OS 9's control panels set them; put more rows of your own
 /// under it the same way.
 public struct ClassicThemeChooser: View {
@@ -26,10 +26,16 @@ public struct ClassicThemeChooser: View {
         let options = themes.map { (value: $0, label: $0.name) }
         VStack(alignment: .leading, spacing: 10 * s) {
             if choice.followsSystem {
-                row("Light:") { ClassicPopUp(selection: $choice.light, options: options) }
-                row("Dark:") { ClassicPopUp(selection: $choice.dark, options: options) }
+                row("Light:") {
+                    ClassicPopUp(selection: Binding(get: { choice.lightTheme(among: themes) },
+                                                    set: { choice.light = $0 }), options: options)
+                }
+                row("Dark:") {
+                    ClassicPopUp(selection: Binding(get: { choice.darkTheme(among: themes) },
+                                                    set: { choice.dark = $0 }), options: options)
+                }
             } else {
-                row("Theme:") { ClassicPopUp(selection: $choice.light, options: options) }
+                row("Theme:") { ClassicPopUp(selection: $choice.theme, options: options) }
             }
             Toggle("Follow macOS light and dark", isOn: Binding(
                 get: { choice.followsSystem },
