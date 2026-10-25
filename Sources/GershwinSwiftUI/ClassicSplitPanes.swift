@@ -44,13 +44,15 @@ public final class ClassicSplitPanesView<PaneID: Hashable & Sendable & Codable>:
         super.init(frame: .zero)
         split.showsScrollBars = false          // the panes scroll themselves
         split.makePane = nil                   // a fixed layout: the person drags dividers, not splits panes
-        addSubview(split)
         for (id, content) in panes {
             let host = NSHostingView(rootView: ClassicThemed(themes) { content })
             host.sizingOptions = []            // the split view sizes it, not its content
             addSubview(host)
             hosts[id] = host
         }
+        // Last, so on top of the panes: it draws the outline of a divider being dragged, which the panes would
+        // otherwise cover. It passes clicks through to them except on the dividers.
+        addSubview(split)
         split.paneView = { [weak self] id in self?.hosts[id] }
 
         let wanted = Set(layout.panes)
