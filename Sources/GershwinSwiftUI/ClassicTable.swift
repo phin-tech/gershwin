@@ -15,12 +15,24 @@ public struct ClassicColumn<Row>: Identifiable {
     public let title: String
     public let width: Width
     public let text: (Row) -> String
+    /// What to draw instead of the text, for a column of icons.
+    let view: ((Row) -> AnyView)?
 
     public init(_ title: String, width: Width = .flexible, text: @escaping (Row) -> String) {
         id = title
         self.title = title
         self.width = width
         self.text = text
+        view = nil
+    }
+
+    /// A column whose cells are views: an icon, say. Draw them to fit a row, in the row's text colour.
+    public init<Cell: View>(_ title: String, width: Width, @ViewBuilder cell: @escaping (Row) -> Cell) {
+        id = title
+        self.title = title
+        self.width = width
+        text = { _ in "" }
+        view = { AnyView(cell($0)) }
     }
 }
 
@@ -61,7 +73,7 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
                     ForEach(rows) { row in
                         let selected = row.id == selection
                         HStack(spacing: 0) {
-                            ForEach(columns) { column in cell(column.text(row), column: column, bold: emphasized(row)) }
+                            ForEach(columns) { column in cell(row, column: column, bold: emphasized(row)) }
                         }
                         .frame(height: 18 * s)
                         .foregroundStyle(Color(selected ? theme.palette.selectedText : theme.palette.text))
@@ -112,12 +124,18 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
         .frame(maxWidth: ownWidth(column) == nil ? .infinity : nil)
     }
 
-    private func cell(_ text: String, column: ClassicColumn<Row>, bold: Bool) -> some View {
+    private func cell(_ row: Row, column: ClassicColumn<Row>, bold: Bool) -> some View {
         let width = ownWidth(column).map { $0 * theme.scale }
-        return Text(text).lineLimit(1).truncationMode(.tail).fontWeight(bold ? .bold : .regular)
-            .padding(.horizontal, 6 * theme.scale)
-            .frame(width: width, alignment: .leading)
-            .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
+        return Group {
+            if let view = column.view {
+                view(row)
+            } else {
+                Text(column.text(row)).lineLimit(1).truncationMode(.tail).fontWeight(bold ? .bold : .regular)
+            }
+        }
+        .padding(.horizontal, 6 * theme.scale)
+        .frame(width: width, alignment: .leading)
+        .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
     }
 
     /// A column's new width, in Mac OS 9 pixels, when its rule has been dragged `translation` points from where the
