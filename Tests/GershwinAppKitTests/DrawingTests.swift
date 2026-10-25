@@ -48,8 +48,10 @@ private func frameView(_ style: ClassicWindowStyle, _ theme: ClassicTheme, size:
     return view
 }
 
-/// The themes whose windows are outlined, a bevel inside the outline: all but Windows 95's and the Amiga's.
-private let outlined = ClassicTheme.all.filter { $0.chrome.titleBar != .windows95 && $0.chrome.family != .amiga }
+/// The themes whose windows are outlined, a bevel inside the outline: all but Windows 95's, the Amiga's and Aqua's.
+private let outlined = ClassicTheme.all.filter {
+    $0.chrome.titleBar != .windows95 && $0.chrome.family != .amiga && $0.chrome.family != .aqua
+}
 
 @MainActor
 @Test(arguments: outlined)
@@ -244,6 +246,34 @@ func popUpButtonSizeScalesWithTheTheme(scale: CGFloat) {
     #expect(scaled.intrinsicContentSize.height == 21 * scale)
 }
 
+@MainActor
+@Test func anAquaWindowHasRoundTopCornersAndTrafficLights() throws {
+    let view = frameView(.document, ClassicTheme(.aqua))
+    view.drawsAsActive = true
+    let rep = try render(view)
+    // Clear outside the round corner; the pinstripes just inside it.
+    #expect(rep.alpha(0, 0) == 0)
+    #expect(rep.alpha(10, 10) == 255)
+    // The close button is red, at the left, and the zoom button green after the minimize button.
+    let layout = WindowChromeLayout(bounds: view.bounds, style: .document, aqua: true)
+    let close = rep(Int(layout.closeBox.midX), Int(layout.closeBox.midY))
+    #expect(close.red > 150 && close.green < 120)
+    let zoom = try #require(layout.zoomBox)
+    #expect(zoom.minX > layout.collapseBox.maxX)
+    let green = rep(Int(zoom.midX), Int(zoom.midY))
+    #expect(green.green > 120 && green.red < 120)
+}
+
+@MainActor
+@Test func aquaGraphitesTrafficLightsAreGrey() throws {
+    let view = frameView(.document, ClassicTheme(.aquaGraphite))
+    view.drawsAsActive = true
+    let rep = try render(view)
+    let layout = WindowChromeLayout(bounds: view.bounds, style: .document, aqua: true)
+    let close = rep(Int(layout.closeBox.midX), Int(layout.closeBox.midY))
+    #expect(abs(Int(close.red) - Int(close.blue)) < 60)
+}
+
 /// Writes each component in each built-in theme to PNGs in GERSHWIN_GALLERY, to look at. Off unless that's set.
 @MainActor
 @Test(.enabled(if: ProcessInfo.processInfo.environment["GERSHWIN_GALLERY"] != nil))
@@ -393,6 +423,11 @@ private struct GalleryControls: View {
             HStack {
                 Text("Copies: \(Int(count))")
                 ClassicLittleArrows(value: $count, in: 1...10)
+            }
+            HStack {
+                Toggle("Checked", isOn: .constant(true))
+                Button("Cancel") {}
+                Button("OK") {}.classicDefault()
             }
             HStack {
                 Button("Bevel") {}.buttonStyle(ClassicBevelButtonStyle())

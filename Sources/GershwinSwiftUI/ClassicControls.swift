@@ -8,11 +8,12 @@ import GershwinChrome
 import SwiftUI
 
 private enum Family {
-    case platinum, classic, beos
+    case platinum, classic, beos, aqua
 
     init(_ chrome: ChromeTheme) {
         switch (chrome.family, chrome.tabStyle) {
         case (.beos, _): self = .beos
+        case (.aqua, _): self = .aqua
         case (_, .folder): self = .classic
         default: self = .platinum
         }
@@ -80,6 +81,9 @@ struct DisclosureTriangle: View {
                 context.fill(path, with: .color(Color(p.border)))
             case .beos:
                 context.stroke(path, with: .color(Color(p.text)), lineWidth: s)
+            case .aqua:
+                // Aqua's: a plain dark grey triangle.
+                context.fill(path, with: .color(Color(p.border)))
             }
         }
     }
@@ -152,6 +156,10 @@ private struct SliderTrack: View {
                         .offset(x: groove.minX, y: groove.minY)
                     Rectangle().fill(beosBlue).frame(width: groove.width * fraction, height: groove.height)
                         .offset(x: groove.minX, y: groove.minY)
+                case .aqua:
+                    // A thin rounded groove of white gel.
+                    AquaGel(shape: Capsule(), color: aquaWhite).frame(width: groove.width, height: groove.height)
+                        .offset(x: groove.minX, y: groove.minY)
                 }
             }
         }
@@ -164,9 +172,20 @@ private struct SliderThumb: View {
     var body: some View {
         let p = theme.palette, s = theme.scale
         let family = Family(theme.chrome)
+        if family == .aqua {
+            // Aqua's: a round bead of blue gel.
+            AquaGel(shape: Circle(), color: Color(p.thumb)).padding(.vertical, 2.5 * s)
+        } else {
+            classicThumb(p, s, family)
+        }
+    }
+
+    private func classicThumb(_ p: Palette, _ s: CGFloat, _ family: Family) -> some View {
         Canvas { context, size in
             var path = Path()
             switch family {
+            case .aqua:
+                break
             case .platinum, .beos:
                 // A pentagon pointing down (Mac OS 8), or BeOS's triangle.
                 if family == .platinum {

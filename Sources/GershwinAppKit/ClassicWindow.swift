@@ -60,8 +60,9 @@ open class ClassicWindow: NSWindow {
 
     private func applyTheme() {
         appearance = theme.nsAppearance
-        // A BeOS window is transparent beside its tabs, and clicks there go to whatever is behind.
-        let opaque = theme.chrome.family != .beos
+        // A BeOS window is transparent beside its tabs, and clicks there go to whatever is behind; an Aqua window's top
+        // corners are round.
+        let opaque = theme.chrome.family != .beos && theme.chrome.family != .aqua
         isOpaque = opaque
         backgroundColor = opaque ? theme.background : .clear
         container.needsLayout = true
@@ -317,7 +318,7 @@ public final class ClassicFrameView: NSView {
     /// Where `mainView` goes, in this view's (Mac OS 9 pixel) coordinates.
     var mainRect: CGRect {
         switch family {
-        case .macintosh: let l = macLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
+        case .macintosh, .aqua: let l = macLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         case .beos: let l = beLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.growBox)
         case .os2: let l = os2Layout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: nil)
         case .amiga: let l = amigaLayout; return paneArea(main: l.main, scrollBar: l.scrollBar, grow: l.sizeGadget)
@@ -344,7 +345,7 @@ public final class ClassicFrameView: NSView {
             // The size gadget, below the arrows in the right border.
             guard let size = amigaLayout.sizeGadget else { return .zero }
             return CGSize(width: size.width, height: max(0, mainRect.maxY - size.minY))
-        case .macintosh, .os2, .openLook: return .zero
+        case .macintosh, .aqua, .os2, .openLook: return .zero
         }
     }
 
@@ -365,8 +366,8 @@ public final class ClassicFrameView: NSView {
         let big = CGRect(x: 0, y: 0, width: 2000, height: 2000)
         let main: CGRect
         switch family {
-        case .macintosh:
-            let layout = WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar)
+        case .macintosh, .aqua:
+            let layout = WindowChromeLayout(bounds: big, style: style, showsTabBar: showsTabBar, aqua: family == .aqua)
             main = paneArea(main: layout.main, scrollBar: layout.scrollBar, grow: nil)
         case .beos:
             let layout = BeOSChromeLayout(bounds: big, style: style, titleWidths: [0])
@@ -427,7 +428,7 @@ public final class ClassicFrameView: NSView {
 
     /// The barber pole moves while it shows; nothing ticks otherwise.
     private func updateProgressTimer() {
-        let animate = placardProgress == .indeterminate && window != nil && family == .macintosh
+        let animate = placardProgress == .indeterminate && window != nil && (family == .macintosh || family == .aqua)
         if animate, progressTimer == nil {
             progressTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated {
@@ -480,7 +481,7 @@ public final class ClassicFrameView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     public override var isFlipped: Bool { true }
-    public override var isOpaque: Bool { family != .beos }
+    public override var isOpaque: Bool { family != .beos && family != .aqua }
 
     private var family: ChromeFamily { theme.chrome.family }
 
@@ -518,6 +519,7 @@ public final class ClassicFrameView: NSView {
     static func collapsedHeight(family: ChromeFamily, style: ClassicWindowStyle) -> CGFloat {
         switch family {
         case .macintosh: style.collapsedHeight
+        case .aqua: WindowChromeLayout.collapsedHeight(for: style, aqua: true)
         case .beos: BeOSMetrics.tabHeight(for: style)
         case .os2: OS2Metrics.collapsedHeight(for: style)
         case .amiga: AmigaMetrics.collapsedHeight(for: style)
@@ -554,13 +556,16 @@ public final class ClassicFrameView: NSView {
         case (.os2, .utility), (.amiga, .utility), (.openLook, .utility): theme.font(size: 9)
         case (.os2, _), (.amiga, _), (.openLook, _): theme.font(size: 11)
         case (.beos, .utility): theme.font(size: 10)
+        case (.aqua, .utility): theme.font(size: 11)
+        case (.aqua, _): theme.font(size: 13)
         case (.macintosh, .utility): ClassicTheme.smallFont(size: 9)
         default: theme.font(size: 12)
         }
     }
 
     private var macLayout: WindowChromeLayout {
-        WindowChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar)
+        WindowChromeLayout(bounds: bounds, style: style, isCollapsed: isCollapsed, showsTabBar: showsTabBar,
+                           aqua: family == .aqua)
     }
 
     /// The titles a BeOS window's tabs show: the tabs', or with one tab the window's own.
@@ -590,7 +595,7 @@ public final class ClassicFrameView: NSView {
     public override func layout() {
         super.layout()
         switch family {
-        case .macintosh:
+        case .macintosh, .aqua:
             let layout = macLayout
             if let scrollBar, let rect = layout.scrollBar { scrollBar.frame = rect }
             if let tabBar, let rect = layout.tabBar { tabBar.frame = rect }
@@ -647,7 +652,7 @@ public final class ClassicFrameView: NSView {
         let scroll = "Scroll bar: To see more of what is in this window, click the arrows or drag the scroll box."
         let grow = "Size box: To make this window larger or smaller, drag here."
         switch family {
-        case .macintosh:
+        case .macintosh, .aqua:
             let layout = macLayout
             if layout.closeBox.contains(point) { return ("Close box: To close this window, click here.", layout.closeBox) }
             if let zoom = layout.zoomBox, zoom.contains(point) {
@@ -759,6 +764,11 @@ public final class ClassicFrameView: NSView {
     public override func draw(_ dirtyRect: NSRect) {
         switch family {
         case .macintosh: drawMac(macLayout)
+        case .aqua:
+            drawAqua(macLayout)
+            // The shadow follows the window's shape, whose top corners are round.
+            window?.invalidateShadow()
+            return
         case .beos:
             drawBeOS(beLayout)
             // The shadow follows the window's opaque shape, which the tabs change.
@@ -1169,6 +1179,55 @@ public final class ClassicFrameView: NSView {
         }
     }
 
+    // MARK: Aqua
+
+    /// The pinstripes all over, under a title bar with the three gel buttons at its left and the title centred; the
+    /// top corners round. In the background the stripes fade and the buttons go grey, as Mac OS X's did.
+    private func drawAqua(_ layout: WindowChromeLayout) {
+        let t = theme
+        NSColor.clear.setFill()
+        bounds.fill(using: .copy)
+        let shape = t.aquaWindowShape(bounds)
+        NSGraphicsContext.saveGraphicsState()
+        shape.addClip()
+        t.drawAquaPinstripes(bounds, faded: !isActive)
+        if !layout.isCollapsed {
+            // A soft line where the title bar meets the content.
+            NSColor(white: 0, alpha: 0.25).setFill()
+            NSRect(x: layout.titleBar.minX, y: layout.titleBar.maxY - 1, width: layout.titleBar.width, height: 1).fill()
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor(white: 0, alpha: 0.35).setStroke()
+        shape.lineWidth = 1
+        shape.stroke()
+
+        let title = window?.title ?? ""
+        let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
+                                         textHeight: ceil(titleFont.ascender - titleFont.descender))
+        t.drawTrafficLight(layout.closeBox, .close, pressed: pressedBox == .close, active: isActive)
+        t.drawTrafficLight(layout.collapseBox, .minimize, pressed: pressedBox == .collapse, active: isActive)
+        if let zoom = layout.zoomBox { t.drawTrafficLight(zoom, .zoom, pressed: pressedBox == .zoom, active: isActive) }
+        t.drawText(title, in: titleRect, font: titleFont, color: isActive ? t.text : t.disabledText, alignment: .center)
+
+        if let placard = layout.placard { drawAquaPlacard(placard) }
+        if let grow = layout.growBox { t.drawAquaGrip(grow) }
+    }
+
+    /// Aqua's status line: the window's own stripes under a soft rule, the text small, and any progress bar at the right.
+    private func drawAquaPlacard(_ rect: CGRect) {
+        let t = theme
+        NSColor(white: 0, alpha: 0.2).setFill()
+        NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: 1).fill()
+        var textRect = rect.insetBy(dx: 6, dy: 0)
+        if let placardProgress {
+            let width = min(100, floor(rect.width / 3))
+            let bar = NSRect(x: rect.maxX - 4 - width, y: rect.minY + 3, width: width, height: rect.height - 6)
+            ClassicProgressBar.draw(value: placardProgress.fraction, phase: progressPhase, in: bar, theme: t)
+            textRect.size.width = max(0, bar.minX - 6 - textRect.minX)
+        }
+        t.drawText(placardText, in: textRect, font: t.font(size: 10), color: isActive ? t.text : t.disabledText)
+    }
+
     // MARK: OPEN LOOK
 
     private func drawOpenLook(_ layout: OpenLookChromeLayout) {
@@ -1296,7 +1355,7 @@ public final class ClassicFrameView: NSView {
         guard let window = window as? ClassicWindow else { return super.mouseDown(with: event) }
         let point = convert(event.locationInWindow, from: nil)
         switch family {
-        case .macintosh: macMouseDown(event, at: point, in: window)
+        case .macintosh, .aqua: macMouseDown(event, at: point, in: window)
         case .beos: beMouseDown(event, at: point, in: window)
         case .os2: os2MouseDown(event, at: point, in: window)
         case .amiga: amigaMouseDown(event, at: point, in: window)

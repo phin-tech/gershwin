@@ -46,7 +46,68 @@ struct GershwinRootModifier: ViewModifier {
             .foregroundStyle(Color(theme.palette.text))
             .tint(Color(theme.palette.highlight))
             .environment(\.classicTheme, theme)
-            .background(Color(theme.palette.background))
+            .background {
+                if theme.isAqua { AquaPinstripes() } else { Color(theme.palette.background) }
+            }
+    }
+}
+
+// MARK: - Aqua
+
+/// Aqua's pinstripes, behind a window's controls as behind its title.
+struct AquaPinstripes: View {
+    @Environment(\.classicTheme) private var theme
+
+    var body: some View {
+        let p = theme.palette, band = AquaMetrics.pinstripe * theme.scale
+        Canvas { context, size in
+            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(p.background)))
+            var y: CGFloat = 0
+            while y < size.height {
+                context.fill(Path(CGRect(x: 0, y: y, width: size.width, height: band)),
+                             with: .color(Color(p.light).opacity(0.6)))
+                y += band * 2
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Gel in `shape`: lighter at the top, the colour through the middle, glowing at the bottom, a gloss over its upper
+/// half and an edge of the colour, darker (GershwinAppKit's `drawGel`, for SwiftUI).
+struct AquaGel<S: InsettableShape>: View {
+    let shape: S
+    var color: Color
+    var pressed = false
+
+    var body: some View {
+        let base = pressed ? color.mix(with: .black, by: 0.25) : color
+        GeometryReader { geometry in
+            let h = geometry.size.height
+            ZStack(alignment: .top) {
+                shape.fill(LinearGradient(stops: [
+                    .init(color: base.mix(with: .white, by: 0.45), location: 0), .init(color: base, location: 0.5),
+                    .init(color: base, location: 0.75), .init(color: base.mix(with: .white, by: 0.35), location: 1),
+                ], startPoint: .top, endPoint: .bottom))
+                Capsule()
+                    .fill(LinearGradient(colors: [.white.opacity(0.85), .white.opacity(0.15)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: geometry.size.width * 0.8, height: h * 0.45)
+                    .padding(.top, 1)
+                    .clipShape(shape)
+                shape.strokeBorder(base.mix(with: .black, by: 0.45).opacity(0.8), lineWidth: 1)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Aqua's white gel, for a button that isn't the default.
+let aquaWhite = Color(white: 0.9)
+
+private extension Color {
+    func mix(with other: Color, by fraction: Double) -> Color {
+        Color(NSColor(self).blended(withFraction: fraction, of: NSColor(other)) ?? NSColor(self))
     }
 }
 
@@ -84,8 +145,18 @@ public struct ClassicButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         let p = theme.palette, s = theme.scale
         let pressed = configuration.isPressed
+        if theme.isAqua {
+            // A capsule of white gel, or the default button's blue; no ring.
+            return AnyView(configuration.label
+                .foregroundStyle(Color(isEnabled ? p.text : p.disabledText))
+                .padding(.horizontal, 14 * s)
+                .frame(minWidth: 58 * s, minHeight: 20 * s)
+                .background(AquaGel(shape: Capsule(), color: isDefault ? Color(p.thumb) : aquaWhite, pressed: pressed)
+                    .opacity(isEnabled ? 1 : 0.6))
+                .contentShape(Rectangle()))
+        }
         let shape = RoundedRectangle(cornerRadius: 4 * s, style: .continuous)
-        return configuration.label
+        return AnyView(configuration.label
             .foregroundStyle(Color(isEnabled ? p.text : p.disabledText))
             .padding(.horizontal, 14 * s)
             .frame(minWidth: 58 * s, minHeight: 20 * s)
@@ -103,7 +174,7 @@ public struct ClassicButtonStyle: ButtonStyle {
                         .strokeBorder(Color(p.border), lineWidth: 3 * s)
                 }
             }
-            .contentShape(Rectangle())
+            .contentShape(Rectangle()))
     }
 }
 
@@ -134,9 +205,15 @@ public struct ClassicCheckboxStyle: ToggleStyle {
         } label: {
             HStack(spacing: 6 * s) {
                 ZStack {
-                    Rectangle().fill(Color(p.light))
-                    Rectangle().strokeBorder(Color(isEnabled ? p.border : p.disabledText), lineWidth: s)
-                    Bevel(light: Color(p.dark), dark: Color(p.background), unit: s).padding(s)
+                    if theme.isAqua {
+                        // Aqua's: a rounded square of gel, blue when checked.
+                        AquaGel(shape: RoundedRectangle(cornerRadius: 3 * s),
+                                color: configuration.isOn ? Color(p.thumb) : aquaWhite)
+                    } else {
+                        Rectangle().fill(Color(p.light))
+                        Rectangle().strokeBorder(Color(isEnabled ? p.border : p.disabledText), lineWidth: s)
+                        Bevel(light: Color(p.dark), dark: Color(p.background), unit: s).padding(s)
+                    }
                     if configuration.isOn {
                         CheckMark()
                             .stroke(Color(isEnabled ? p.border : p.disabledText),
@@ -187,10 +264,15 @@ public struct ClassicRadioGroup<Value: Hashable>: View {
                 } label: {
                     HStack(spacing: 6 * s) {
                         ZStack {
-                            Circle().fill(Color(p.light))
-                            Circle().strokeBorder(Color(p.border), lineWidth: s)
-                            Circle().trim(from: 0.375, to: 0.875).stroke(Color(p.dark), lineWidth: s)
-                                .padding(1.5 * s)
+                            if theme.isAqua {
+                                // Aqua's: a bead of gel, blue when chosen, with a dark dot.
+                                AquaGel(shape: Circle(), color: selection == option.value ? Color(p.thumb) : aquaWhite)
+                            } else {
+                                Circle().fill(Color(p.light))
+                                Circle().strokeBorder(Color(p.border), lineWidth: s)
+                                Circle().trim(from: 0.375, to: 0.875).stroke(Color(p.dark), lineWidth: s)
+                                    .padding(1.5 * s)
+                            }
                             if selection == option.value {
                                 Circle().fill(Color(p.border)).padding(3.5 * s)
                             }
@@ -217,7 +299,18 @@ public struct ClassicGroupBoxStyle: GroupBoxStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         let p = theme.palette, s = theme.scale
-        return configuration.content
+        if theme.isAqua {
+            // Aqua's: a faintly darker rounded box, its title above it rather than in its edge.
+            return AnyView(VStack(alignment: .leading, spacing: 4 * s) {
+                configuration.label
+                configuration.content
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10 * s)
+                    .background(RoundedRectangle(cornerRadius: 5 * s).fill(Color.black.opacity(0.05)))
+                    .overlay(RoundedRectangle(cornerRadius: 5 * s).strokeBorder(Color.black.opacity(0.2), lineWidth: s))
+            })
+        }
+        return AnyView(configuration.content
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12 * s)
             .padding(.top, 16 * s)
@@ -233,7 +326,7 @@ public struct ClassicGroupBoxStyle: GroupBoxStyle {
                     .padding(.horizontal, 4 * s)
                     .background(Color(p.background))
                     .padding(.leading, 8 * s)
-            }
+            })
     }
 }
 
@@ -244,13 +337,24 @@ struct ClassicFieldModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         let p = theme.palette, s = theme.scale
-        content
+        if theme.isAqua {
+            // Aqua's: white, a thin grey edge, a shadow along the top inside it.
+            return AnyView(content
+                .font(Font(theme.font(size: 12 * s)))
+                .foregroundStyle(Color(p.contentText))
+                .padding(.horizontal, 4 * s)
+                .padding(.vertical, 3 * s)
+                .background(Color(p.content))
+                .overlay(alignment: .top) { Rectangle().fill(Color.black.opacity(0.25)).frame(height: s) }
+                .overlay(Rectangle().strokeBorder(Color(p.dark), lineWidth: s)))
+        }
+        return AnyView(content
             .font(Font(ClassicTheme.smallFont(size: 12 * s)))
             .foregroundStyle(Color(p.contentText))
             .padding(.horizontal, 4 * s)
             .padding(.vertical, 3 * s)
             .background(Color(p.content))
             .overlay(Rectangle().strokeBorder(Color(p.border), lineWidth: s))
-            .overlay(Bevel(light: Color(p.dark), dark: Color(p.light), unit: s).padding(-s))
+            .overlay(Bevel(light: Color(p.dark), dark: Color(p.light), unit: s).padding(-s)))
     }
 }

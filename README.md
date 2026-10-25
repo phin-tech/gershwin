@@ -1,16 +1,19 @@
 # Gershwin
 
-Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1 and 95, the Amiga's Workbench and
-Sun's OPEN LOOK drew them, for AppKit and SwiftUI on macOS 14 and
+Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1 and 95, the Amiga's Workbench,
+Sun's OPEN LOOK and Mac OS X's Aqua drew them, for AppKit and SwiftUI on macOS 14 and
 later. Named for the planned successor to Copland, the Mac OS that never shipped.
 
-Fifteen themes are built in: **Platinum** (Mac OS 8 and 9), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
+Seventeen themes are built in: **Platinum** (Mac OS 8 and 9), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
 **System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**, **OS/2 Warp** and **OS/2 Warp
 Dark** (a sizing border round a blue title bar, the system menu at its left; the dark one is new, Warp had none),
 **Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), and the Amiga's **Workbench** (3.1) and
 **Workbench 1.3** (the drag bar between the close gadget and the zoom and depth gadgets, the scroll bar's arrows
 together above the size gadget), and Sun's **OPEN LOOK** (a window menu button for boxes, a resize corner in each
-corner, pushpins on pop-ups, and the elevator scroll bar riding its cable). A theme is a value (`ChromeTheme`), so an
+corner, pushpins on pop-ups, and the elevator scroll bar riding its cable), and Mac OS X's **Aqua** and **Aqua
+Graphite** (10.0 to 10.4: pinstripes, the close, minimize and zoom buttons as gel at the left of the title bar, a blue
+gel scroll thumb with both arrows at the bottom, capsule buttons with the default one blue; menus, tabs and dividers
+keep Platinum's shapes in Aqua's colours). A theme is a value (`ChromeTheme`), so an
 app can make its own.
 
 ## What's in it

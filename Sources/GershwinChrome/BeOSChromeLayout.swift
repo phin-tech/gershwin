@@ -16,6 +16,9 @@ public enum ChromeFamily: Sendable {
     /// Sun's OPEN LOOK: a border with resize corners, a header with the window menu button (or a pop-up's pushpin), an
     /// elevator scroll bar (OpenLookChromeLayout).
     case openLook
+    /// Mac OS X's Aqua, 10.0 to 10.4: a pinstriped title bar with the close, minimize and zoom buttons at its left,
+    /// round and glossy as gel; no frame beside the content (WindowChromeLayout, `aqua`).
+    case aqua
 }
 
 /// The sizes of a BeOS window's parts, in points, as BeOS R5 drew them.

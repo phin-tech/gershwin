@@ -48,10 +48,11 @@ public final class ClassicScrollBar: NSView {
     public override var isOpaque: Bool { true }
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Both arrows at the bottom in the Amiga's themes, OPEN LOOK's elevator in its, one at each end elsewhere.
+    /// Both arrows at the bottom in the Amiga's themes and Aqua's, OPEN LOOK's elevator in its, one at each end
+    /// elsewhere.
     private var geometry: ScrollbarGeometry {
         let arrows: ScrollArrows = switch theme.chrome.family {
-        case .amiga: .together
+        case .amiga, .aqua: .together
         case .openLook: .elevator
         default: .atEnds
         }
@@ -63,6 +64,7 @@ public final class ClassicScrollBar: NSView {
     public override func draw(_ dirtyRect: NSRect) {
         let t = theme
         let g = geometry
+        if t.isAqua { return drawAqua(g) }
         guard isActive else {
             t.background.setFill()
             bounds.fill()
@@ -97,6 +99,34 @@ public final class ClassicScrollBar: NSView {
         drawArrow(g.downArrow, pointingUp: false, pressed: pressed == .lineDown, enabled: thumb != nil)
 
         if let thumb { drawThumb(thumb) }
+    }
+
+    /// Aqua's: a white track, shadowed along its left as if sunk, a capsule of blue gel for the thumb (white in a window
+    /// behind), and both arrows at the bottom in white gel.
+    private func drawAqua(_ g: ScrollbarGeometry) {
+        let t = theme
+        let position = position ?? ScrollPosition(total: 0, offset: 0, visible: 0)
+        NSGradient(colorsAndLocations: (NSColor(white: 0.78, alpha: 1), 0), (NSColor(white: 0.95, alpha: 1), 0.35),
+                   (.white, 0.7), (NSColor(white: 0.93, alpha: 1), 1))?.draw(in: bounds, angle: 0)
+        NSColor(white: 0, alpha: 0.3).setFill()
+        NSRect(x: bounds.minX, y: bounds.minY, width: 1, height: bounds.height).fill()
+        let thumb = g.thumb(for: position)
+        if let thumb {
+            let face = thumb.insetBy(dx: 2, dy: 1)
+            let radius = face.width / 2
+            t.drawGel(NSBezierPath(roundedRect: face, xRadius: radius, yRadius: radius), in: face,
+                      color: isActive ? t.thumb : t.aquaWhite, pressed: pressed == .thumb)
+        }
+        for (rect, pointingUp, part) in [(g.upArrow, true, ScrollbarPart.lineUp), (g.downArrow, false, .lineDown)] {
+            t.drawGel(NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5)), in: rect, color: t.aquaWhite,
+                      pressed: pressed == part)
+            (thumb == nil ? t.disabledText : t.text).setFill()
+            let midX = rect.midX.rounded(.down), top = (rect.midY - 2).rounded(.down)
+            for row in 0..<4 {
+                let half = CGFloat(pointingUp ? row : 3 - row)
+                NSRect(x: midX - half, y: top + CGFloat(row), width: half * 2 + 1, height: 1).fill()
+            }
+        }
     }
 
     /// OPEN LOOK's: a cable between two anchors, the part shown darkened on it, and the elevator riding it, its up,

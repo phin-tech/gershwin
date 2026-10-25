@@ -91,7 +91,7 @@ private final class BalloonView: NSView {
     init(text: String, theme: ClassicTheme) {
         self.text = text
         self.theme = theme
-        isTooltip = theme.chrome.family == .beos
+        isTooltip = theme.chrome.family == .beos || theme.chrome.family == .aqua
         font = isTooltip ? (NSFont(name: "Helvetica", size: 11) ?? .systemFont(ofSize: 11)) : ClassicTheme.smallFont(size: 10)
         let measured = (text as NSString).boundingRect(with: NSSize(width: Metrics.maxTextWidth, height: 1000),
                                                        options: [.usesLineFragmentOrigin], attributes: [.font: font])

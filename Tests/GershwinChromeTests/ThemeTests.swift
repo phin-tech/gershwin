@@ -9,10 +9,10 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
 
 @Test func themesAreFoundAndSavedByTheirIds() throws {
     #expect(ChromeTheme.named("beosDark") == .beosDark)
-    #expect(ChromeTheme.named("aqua") == nil)
+    #expect(ChromeTheme.named("nextstep") == nil)
     #expect(String(decoding: try JSONEncoder().encode(ChromeTheme.gizmo), as: UTF8.self) == #""gizmo""#)
     #expect(try JSONDecoder().decode(ChromeTheme.self, from: Data(#""system7""#.utf8)) == .system7)
-    #expect(throws: DecodingError.self) { try JSONDecoder().decode(ChromeTheme.self, from: Data(#""aqua""#.utf8)) }
+    #expect(throws: DecodingError.self) { try JSONDecoder().decode(ChromeTheme.self, from: Data(#""nextstep""#.utf8)) }
 }
 
 @Test func eachThemePairsWithOneForTheOtherMode() {
@@ -77,7 +77,7 @@ func turningFollowingOffAndOnKeepsEveryChoice(systemIsDark: Bool) {
     let text = String(decoding: try JSONEncoder().encode(choice), as: UTF8.self)
     #expect(!text.contains("light"))   // not chosen: left out
     #expect(try JSONDecoder().decode(ThemeChoice.self, from: Data(text.utf8)) == choice)
-    let partial = try JSONDecoder().decode(ThemeChoice.self, from: Data(#"{"theme": "aqua", "followsSystem": true}"#.utf8))
+    let partial = try JSONDecoder().decode(ThemeChoice.self, from: Data(#"{"theme": "nextstep", "followsSystem": true}"#.utf8))
     #expect(partial == ThemeChoice(theme: .platinum, followsSystem: true))
 }
 

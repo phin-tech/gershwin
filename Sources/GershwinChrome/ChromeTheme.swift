@@ -133,8 +133,15 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
 
     public static let builtIn: [ChromeTheme] = [
         .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
-        .windows31, .windows95, .workbench, .workbench13, .openLook,
+        .windows31, .windows95, .workbench, .workbench13, .openLook, .aqua, .aquaGraphite,
     ]
+
+    /// Mac OS X's Aqua, as Jaguar and Panther drew it: pinstripes, and buttons like blue gel.
+    public static let aqua = ChromeTheme(id: "aqua", name: "Aqua", family: .aqua, palette: .aqua)
+
+    /// Aqua's Graphite: the same, its blue and its traffic lights in grey, for those who found them loud.
+    public static let aquaGraphite = ChromeTheme(id: "aquaGraphite", name: "Aqua Graphite", family: .aqua,
+                                                 palette: .aquaGraphite)
 
     /// Sun's OPEN LOOK, as OpenWindows drew it: warm grey windows, the focused one's header darker; the text a
     /// cmdtool's, black on white.
@@ -303,6 +310,21 @@ public struct Palette: Hashable, Sendable {
         content: RGB(0xFFFFFF), contentText: RGB(0x000000),
         titleTab: TitleTabColors(face: RGB(0xB8B4AC), light: RGB(0xFFFFFF), dark: RGB(0x8A867E),
                                  inactiveFace: RGB(0xD0CCC4), text: RGB(0x000000)))
+
+    /// Aqua's: pinstripes of white and a very light grey, a sky-blue selection, the default button's blue in
+    /// `thumb` (a scroll thumb's and a progress bar's too). From screenshots of 10.2: approximate.
+    public static let aqua = Palette(
+        background: RGB(0xECECEC), light: RGB(0xFFFFFF), dark: RGB(0x8C8C8C), border: RGB(0x5A5A5A),
+        well: RGB(0xD4D4D4), highlight: RGB(0x3875D7), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x9A9A9A), pinstripe: RGB(0xE4E4E4), thumb: RGB(0x3A7FDC),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000))
+
+    /// Graphite: Aqua with its blues in slate grey.
+    public static let aquaGraphite = Palette(
+        background: RGB(0xECECEC), light: RGB(0xFFFFFF), dark: RGB(0x8C8C8C), border: RGB(0x5A5A5A),
+        well: RGB(0xD4D4D4), highlight: RGB(0x6E7F94), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x9A9A9A), pinstripe: RGB(0xE4E4E4), thumb: RGB(0x8796A8),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000))
 
     public static let beosDark = Palette(
         background: RGB(0x3A3A3C), light: RGB(0x58585B), dark: RGB(0x1E1E20), border: RGB(0x0C0C0C),

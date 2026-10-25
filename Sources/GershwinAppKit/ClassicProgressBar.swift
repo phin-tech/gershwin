@@ -89,6 +89,7 @@ public final class ClassicProgressBar: NSView {
     /// Draws a bar, its track filling `track` (Mac OS 9 pixels), for ClassicProgressBar and the parts of a window
     /// that show one of their own, like the placard. `phase` moves the barber pole.
     static func draw(value: Double?, phase: CGFloat, in track: NSRect, theme t: ClassicTheme) {
+        if t.isAqua { return drawAqua(value: value, phase: phase, in: track, theme: t) }
         let style = MenuStyle(t.chrome)
         // The bar's own colour: the highlight, black for System 1 and 7, and blue for BeOS.
         let fill: NSColor = switch style {
@@ -139,6 +140,36 @@ public final class ClassicProgressBar: NSView {
                 var x = inside.minX - period + phase - CGFloat(row)
                 while x < inside.maxX {
                     NSRect(x: x, y: inside.minY + CGFloat(row), width: stripe, height: 1).fill()
+                    x += period
+                }
+            }
+        }
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// Aqua's: a white capsule, filled with blue gel as far as it has got; or, not knowing, the blue and white stripes
+    /// under the same gloss, moving.
+    private static func drawAqua(value: Double?, phase: CGFloat, in track: NSRect, theme t: ClassicTheme) {
+        let radius = track.height / 2
+        let shape = NSBezierPath(roundedRect: track.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius)
+        t.drawGel(shape, in: track, color: t.aquaWhite)
+        NSGraphicsContext.saveGraphicsState()
+        shape.addClip()
+        if let value {
+            let done = NSRect(x: track.minX, y: track.minY, width: (track.width * min(max(value, 0), 1)).rounded(),
+                              height: track.height)
+            if done.width > 1 {
+                t.drawGel(NSBezierPath(roundedRect: done.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius),
+                          in: done, color: t.thumb)
+            }
+        } else {
+            t.drawGel(NSBezierPath(rect: track), in: track, color: t.thumb)
+            NSColor(white: 1, alpha: 0.45).setFill()
+            let period = stripe * 2
+            for row in 0..<Int(track.height) {
+                var x = track.minX - period + phase - CGFloat(row)
+                while x < track.maxX {
+                    NSRect(x: x, y: track.minY + CGFloat(row), width: stripe, height: 1).fill()
                     x += period
                 }
             }

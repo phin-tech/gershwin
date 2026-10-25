@@ -56,10 +56,14 @@ public enum ChromeMetrics {
 
 /// Where each part of a Platinum window goes, for a window of a given size. Coordinates are flipped: the origin is
 /// the window's top-left and y grows down, as in the views that draw it.
+///
+/// An Aqua window (`aqua`) is the same shape with Mac OS X's proportions: a taller title bar with its three buttons
+/// together at the left (close, minimize, zoom), and no frame beside or below the content.
 public struct WindowChromeLayout: Equatable, Sendable {
     public let bounds: CGRect
     public let style: ClassicWindowStyle
     public let isCollapsed: Bool
+    public let isAqua: Bool
 
     public let titleBar: CGRect
     public let closeBox: CGRect
@@ -75,30 +79,43 @@ public struct WindowChromeLayout: Equatable, Sendable {
     public let placard: CGRect?
     public let growBox: CGRect?
 
-    public init(bounds: CGRect, style: ClassicWindowStyle, isCollapsed: Bool = false, showsTabBar: Bool = false) {
+    public init(bounds: CGRect, style: ClassicWindowStyle, isCollapsed: Bool = false, showsTabBar: Bool = false,
+                aqua: Bool = false) {
         typealias M = ChromeMetrics
+        typealias A = AquaMetrics
         self.bounds = bounds
         self.style = style
         self.isCollapsed = isCollapsed
+        isAqua = aqua
 
-        titleBar = CGRect(x: bounds.minX + M.border, y: bounds.minY + M.border,
-                          width: max(0, bounds.width - M.border * 2), height: style.titleBarHeight)
-        let box = style.boxSize
+        let border = aqua ? 0 : M.border
+        titleBar = CGRect(x: bounds.minX + border, y: bounds.minY + border,
+                          width: max(0, bounds.width - border * 2),
+                          height: aqua ? A.titleBarHeight(for: style) : style.titleBarHeight)
+        let box = aqua ? A.buttonSize(for: style) : style.boxSize
         let boxY = (titleBar.midY - box / 2).rounded(.down)
-        closeBox = CGRect(x: bounds.minX + style.boxInset, y: boxY, width: box, height: box)
-        collapseBox = CGRect(x: bounds.maxX - style.boxInset - box, y: boxY, width: box, height: box)
-        zoomBox = style.hasZoomBox
-            ? collapseBox.offsetBy(dx: -(box + M.boxGap), dy: 0)
-            : nil
+        if aqua {
+            // Together at the left, in the order Mac OS X put them: close, minimize, zoom.
+            let step = box + A.buttonGap(for: style)
+            closeBox = CGRect(x: bounds.minX + A.buttonInset(for: style), y: boxY, width: box, height: box)
+            collapseBox = closeBox.offsetBy(dx: step, dy: 0)
+            zoomBox = style.hasZoomBox ? collapseBox.offsetBy(dx: step, dy: 0) : nil
+        } else {
+            closeBox = CGRect(x: bounds.minX + style.boxInset, y: boxY, width: box, height: box)
+            collapseBox = CGRect(x: bounds.maxX - style.boxInset - box, y: boxY, width: box, height: box)
+            zoomBox = style.hasZoomBox
+                ? collapseBox.offsetBy(dx: -(box + M.boxGap), dy: 0)
+                : nil
+        }
 
         if isCollapsed {
             content = .zero
         } else {
             let top = titleBar.maxY
-            let frame = style.frameWidth
-            content = CGRect(x: bounds.minX + M.border + frame, y: top,
-                             width: max(0, bounds.width - (M.border + frame) * 2),
-                             height: max(0, bounds.maxY - M.border - frame - top))
+            let frame = aqua ? 0 : style.frameWidth
+            content = CGRect(x: bounds.minX + border + frame, y: top,
+                             width: max(0, bounds.width - (border + frame) * 2),
+                             height: max(0, bounds.maxY - border - frame - top))
         }
 
         let below: CGRect
@@ -131,15 +148,28 @@ public struct WindowChromeLayout: Equatable, Sendable {
 
     /// The boxes the title bar shows, left to right.
     public var boxes: [CGRect] {
-        [closeBox] + [zoomBox].compactMap { $0 } + [collapseBox]
+        isAqua ? [closeBox, collapseBox] + [zoomBox].compactMap { $0 }
+            : [closeBox] + [zoomBox].compactMap { $0 } + [collapseBox]
+    }
+
+    /// A collapsed window's height: the title bar, and for Platinum its border.
+    public static func collapsedHeight(for style: ClassicWindowStyle, aqua: Bool) -> CGFloat {
+        aqua ? AquaMetrics.titleBarHeight(for: style) : style.collapsedHeight
     }
 
     /// Where a title `textWidth` wide is drawn: centred on the window, but kept clear of the boxes, and as wide as
     /// fits between them (the caller truncates the text to the rect's width).
     public func titleRect(textWidth: CGFloat, textHeight: CGFloat) -> CGRect {
         typealias M = ChromeMetrics
-        let leftLimit = closeBox.maxX + M.boxClearance + M.titleClearance
-        let rightLimit = (zoomBox ?? collapseBox).minX - M.boxClearance - M.titleClearance
+        let leftLimit: CGFloat, rightLimit: CGFloat
+        if isAqua {
+            // Clear of the buttons at the left; with nothing at the right, a title too long to centre moves right.
+            leftLimit = (boxes.last?.maxX ?? titleBar.minX) + M.titleClearance
+            rightLimit = titleBar.maxX - M.titleClearance
+        } else {
+            leftLimit = closeBox.maxX + M.boxClearance + M.titleClearance
+            rightLimit = (zoomBox ?? collapseBox).minX - M.boxClearance - M.titleClearance
+        }
         let available = max(0, rightLimit - leftLimit)
         let width = min(textWidth, available)
         var x = titleBar.midX - width / 2

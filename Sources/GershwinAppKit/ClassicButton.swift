@@ -55,6 +55,11 @@ public final class ClassicButton: NSView {
     public override func draw(_ dirtyRect: NSRect) {
         let t = theme
         let face = bounds.insetBy(dx: Metrics.ring, dy: Metrics.ring)
+        if t.isAqua {
+            // Aqua's capsule of gel: white, or blue for the default button. No ring: the colour says which it is.
+            t.drawAquaButton(face, isDefault: isDefault, pressed: isPressed)
+            return t.drawText(title, in: face, font: font, color: t.text, alignment: .center)
+        }
         let ink: NSColor
         switch style {
         case .platinum:
