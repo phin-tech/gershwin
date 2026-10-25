@@ -44,19 +44,21 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
     let columns: [ClassicColumn<Row>]
     @Binding var selection: Row.ID?
     let emphasized: (Row) -> Bool
+    let onOpen: ((Row.ID) -> Void)?
 
     /// Widths the person has dragged columns to, by column id, in Mac OS 9 pixels.
     @State private var dragged: [String: CGFloat] = [:]
     /// The width a column had when its drag began, so the drag measures from there, not from each event.
     @State private var dragStart: [String: CGFloat] = [:]
 
-    /// `emphasized` rows are drawn bold (unread mail, say).
+    /// `emphasized` rows are drawn bold (unread mail, say); `onOpen` hears of a double-click on a row.
     public init(_ rows: [Row], columns: [ClassicColumn<Row>], selection: Binding<Row.ID?>,
-                emphasized: @escaping (Row) -> Bool = { _ in false }) {
+                emphasized: @escaping (Row) -> Bool = { _ in false }, onOpen: ((Row.ID) -> Void)? = nil) {
         self.rows = rows
         self.columns = columns
         _selection = selection
         self.emphasized = emphasized
+        self.onOpen = onOpen
     }
 
     public var body: some View {
@@ -80,6 +82,8 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
                         .background(selected ? Color(theme.palette.highlight) : .clear)
                         .contentShape(Rectangle())
                         .onTapGesture { selection = row.id }
+                        // Alongside, not instead: a single click selects at once, without waiting to see if a second comes.
+                        .simultaneousGesture(TapGesture(count: 2).onEnded { onOpen?(row.id) })
                     }
                 }
             }
