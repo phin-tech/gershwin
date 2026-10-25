@@ -51,7 +51,7 @@ app can make its own.
   `GroupBox` and `DisclosureGroup` beneath it, the way [NeoBrutalism](https://github.com/rational-kunal/NeoBrutalism)
   does, plus, for what SwiftUI won't let be styled, `ClassicPopUp`, `ClassicRadioGroup`, `ClassicSlider`,
   `ClassicLittleArrows`, `ClassicBevelButtonStyle`, `ClassicThemeChooser` (a settings pane's theme pop-ups and
-  Follow macOS checkbox, for a `ThemeChoice`), `ClassicField` (a `ClassicTextField`; SwiftUI's TextField
+  Follow macOS checkbox, for a `ThemeChoice`), `ClassicSidebar` (sections of button rows, each with a lamp, a detail line and a badge, for a source list), `ClassicField` (a `ClassicTextField`; SwiftUI's TextField
   draws macOS's focus ring), `ClassicTabView` (Mac OS 8's tab control) and `.classicField()`.
 
 ```swift

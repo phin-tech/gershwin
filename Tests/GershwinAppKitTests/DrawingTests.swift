@@ -309,7 +309,7 @@ func writeGallery() throws {
         utility.title = "Colours"
         utility.frameView.drawsAsActive = true
         utility.contentView?.layoutSubtreeIfNeeded()
-        let controls = ClassicWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200), style: .panel,
+        let controls = ClassicWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 330), style: .panel,
                                      theme: theme)
         controls.title = "Controls"
         controls.frameView.drawsAsActive = true
@@ -434,6 +434,11 @@ private struct GalleryControls: View {
                 Button("On") {}.buttonStyle(ClassicBevelButtonStyle(isOn: true))
             }
             ClassicField("Name", text: .constant("Fanfare")).frame(width: 200)
+            ClassicSidebar([ClassicSidebarSection(title: "Workspaces", items: [
+                ClassicSidebarItem(id: "a", title: "dottie", marker: .off),
+                ClassicSidebarItem(id: "b", title: "guildhall", badge: "2", marker: .busy),
+                ClassicSidebarItem(id: "c", title: "barnyard", marker: .alert),
+            ])], selection: .constant("b")).frame(width: 200, height: 100)
             ClassicTabView(selection: .constant(1), titles: ["Appearance", "Text", "Sound"]) {
                 Text("The Text tab's page.")
             }
