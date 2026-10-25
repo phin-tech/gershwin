@@ -54,6 +54,11 @@ public struct TextColors: Hashable, Sendable {
             RGB(0x8E9BFF), RGB(0xFF5CB0), RGB(0x6FD5F7), RGB(0xFFFFFF),
         ])
 
+    /// Light grey on Platinum Dark's near-black, Hi-Tech's brightened system palette, the selection its purple.
+    public static let platinumDark = TextColors(
+        foreground: RGB(0xE6E6E6), background: RGB(0x1A1A1A), cursor: RGB(0xE6E6E6),
+        selectionBackground: RGB(0x5959BF), selectionForeground: RGB(0xFFFFFF), ansi: hiTech.ansi)
+
     /// Dark brown on cream, with the system palette warmed to match.
     public static let gizmo = TextColors(
         foreground: RGB(0x2A1E04), background: RGB(0xFFF8E1), cursor: RGB(0x1F8A86),

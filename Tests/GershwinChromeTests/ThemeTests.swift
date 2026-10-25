@@ -18,6 +18,7 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
 @Test func eachThemePairsWithOneForTheOtherMode() {
     #expect(ChromeTheme.platinum.darkCounterpart() == .hiTech)
     #expect(ChromeTheme.hiTech.lightCounterpart() == .platinum)
+    #expect(ChromeTheme.platinumDark.lightCounterpart() == .platinum)
     #expect(ChromeTheme.beos.darkCounterpart() == .beosDark)
     #expect(ChromeTheme.beosDark.lightCounterpart() == .beos)
     #expect(ChromeTheme.gizmo.darkCounterpart() == .hiTech)   // no partner of its own

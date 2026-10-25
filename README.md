@@ -4,7 +4,8 @@ Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 
 Sun's OPEN LOOK and Mac OS X's Aqua drew them, for AppKit and SwiftUI on macOS 14 and
 later. Named for the planned successor to Copland, the Mac OS that never shipped.
 
-Seventeen themes are built in: **Platinum** (Mac OS 8 and 9), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
+Eighteen themes are built in: **Platinum** (Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9
+had none), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
 **System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**, **OS/2 Warp** and **OS/2 Warp
 Dark** (a sizing border round a blue title bar, the system menu at its left; the dark one is new, Warp had none),
 **Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), and the Amiga's **Workbench** (3.1) and

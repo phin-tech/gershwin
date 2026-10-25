@@ -92,6 +92,11 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     /// Copland's dark, metal theme, which Mac OS 8 was to ship as Hi-Tech.
     public static let hiTech = ChromeTheme(id: "hiTech", name: "Hi-Tech", isDark: true, palette: .hiTech,
                                            textColors: .hiTech, partner: "platinum")
+    /// Mac OS 9 never had one: Platinum's shapes with its greys inverted, as Sam's SketchyBar menus draw it. Its
+    /// light pair is Platinum; Platinum's dark one stays Hi-Tech.
+    public static let platinumDark = ChromeTheme(id: "platinumDark", name: "Platinum Dark", isDark: true,
+                                                 palette: .platinumDark, textColors: .platinumDark,
+                                                 partner: "platinum")
     /// Copland's toy-like theme, in the Mac OS 8 betas: mustard plastic and teal.
     public static let gizmo = ChromeTheme(id: "gizmo", name: "Gizmo", palette: .gizmo, textColors: .gizmo)
     /// Copland's sketchbook theme, in the Mac OS 8 betas: paper and pencil.
@@ -132,7 +137,7 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
                                                 textColors: .workbench13, partner: "workbench")
 
     public static let builtIn: [ChromeTheme] = [
-        .platinum, .hiTech, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
+        .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
         .windows31, .windows95, .workbench, .workbench13, .openLook, .aqua, .aquaGraphite,
     ]
 
@@ -206,6 +211,13 @@ public struct Palette: Hashable, Sendable {
         well: RGB(0xBBBBBB), highlight: RGB(0x333399), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x888888), pinstripe: RGB(0x999999), thumb: RGB(0xCCCCFF),
         content: RGB(0xFFFFFF), contentText: RGB(0x000000))
+
+    /// Platinum's greys inverted, its highlight lifted to read on them.
+    public static let platinumDark = Palette(
+        background: RGB(0x333333), light: RGB(0x525252), dark: RGB(0x1A1A1A), border: RGB(0x000000),
+        well: RGB(0x212121), highlight: RGB(0x5959BF), text: RGB(0xE6E6E6), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x808080), pinstripe: RGB(0x444444), thumb: RGB(0x5959BF),
+        content: RGB(0x1A1A1A), contentText: RGB(0xE6E6E6))
 
     public static let hiTech = Palette(
         background: RGB(0x4A4A4E), light: RGB(0x77777D), dark: RGB(0x26262A), border: RGB(0x000000),
