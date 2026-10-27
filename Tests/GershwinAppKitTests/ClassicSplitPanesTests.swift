@@ -20,3 +20,13 @@ import Testing
     view.layoutSubtreeIfNeeded()
     #expect(view.split.hitTest(NSPoint(x: 50, y: 150)) == nil || view.split.hitTest(NSPoint(x: 50, y: 150)) !== view.split)
 }
+
+@MainActor
+@Test func aSplitCanKeepLessThanHalf() throws {
+    let split = ClassicSplitView(pane: "a", theme: .platinum)
+    split.makePane = { "b" }
+    split.split(.stacked, fraction: 0.25)
+    guard case .split(_, _, _, let fraction) = split.tree.root else { Issue.record("not split"); return }
+    #expect(fraction == 0.25)
+    #expect(split.tree.panes == ["a", "b"])
+}

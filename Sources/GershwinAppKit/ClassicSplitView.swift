@@ -90,10 +90,11 @@ public final class ClassicSplitView<PaneID: Hashable & Sendable & Codable>: NSVi
         needsDisplay = true
     }
 
-    /// Splits the pane being typed in, the new one to its right or below it, and types in that.
-    public func split(_ axis: SplitAxis) {
+    /// Splits the pane being typed in, the new one to its right or below it, and types in that. `fraction` is how much
+    /// of the pane the first side (left or top) keeps, 0.05 to 0.95.
+    public func split(_ axis: SplitAxis, fraction: Double = 0.5) {
         guard let new = makePane?() else { return NSSound.beep() }
-        tree.split(focused, along: axis, adding: new)
+        tree.split(focused, along: axis, adding: new, fraction: fraction)
         changed()
         focus(new)
     }

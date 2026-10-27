@@ -664,3 +664,19 @@ func dividersAreDrawnInTheThemesWay(chrome: ChromeTheme) throws {
     #expect(geometry.downArrow.maxY == 200 && geometry.upArrow.maxY == geometry.downArrow.minY)
     #expect(geometry.track.minY == 0 && geometry.track.maxY == geometry.upArrow.minY)
 }
+
+@MainActor
+@Test(arguments: ChromeTheme.builtIn)
+func alertWithAFieldHasRoomForItAboveItsButtons(chrome: ChromeTheme) throws {
+    let plain = ClassicAlert(message: "Name?", buttons: ["OK", "Cancel"])
+    let asking = ClassicAlert(message: "Name?", buttons: ["OK", "Cancel"])
+    asking.field = "untitled"
+    let theme = ClassicTheme(chrome)
+    let view = asking.view(theme: theme)
+    let field = try #require(view.subviews.compactMap { $0 as? NSTextField }.first)
+    #expect(field.stringValue == "untitled")
+    #expect(view.frame.height > plain.view(theme: theme).frame.height)
+    let button = try #require(view.subviews.compactMap { $0 as? ClassicButton }.first)
+    #expect(field.frame.maxY <= button.frame.minY)
+    #expect(plain.view(theme: theme).subviews.compactMap { $0 as? NSTextField }.isEmpty)
+}

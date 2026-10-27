@@ -21,6 +21,9 @@ public final class ClassicAlert {
     public var informativeText: String
     /// Left to right as the user reads them, the default last, as Mac OS 9 laid them out.
     public var buttons: [String]
+    /// A line of text to type in, under the message: nil for none, else what it starts with. After `runModal` it holds
+    /// what was typed (whichever button was pressed).
+    public var field: String?
 
     /// - Parameter buttons: the default first, as NSAlert takes them; they're shown the other way round.
     public init(icon: Icon = .caution, message: String, informativeText: String = "", buttons: [String] = ["OK"]) {
@@ -76,6 +79,7 @@ private final class AlertPanel: NSPanel {
                 rawValue: NSApplication.ModalResponse.alertFirstButtonReturn.rawValue + index))
         }
         contentView = alertView
+        initialFirstResponder = alertView.textField
         level = .modalPanel
         isOpaque = true
         hasShadow = true
@@ -100,21 +104,40 @@ private final class AlertPanel: NSPanel {
     }
 }
 
-private final class AlertView: NSView {
+private final class AlertView: NSView, NSTextFieldDelegate {
     let alert: ClassicAlert
     let theme: ClassicTheme
     private var buttons: [ClassicButton] = []
     private var messageRect = NSRect.zero
     private var infoRect = NSRect.zero
     private var iconRect = NSRect.zero
+    /// The line to type in, if the alert has one; the panel makes it the first responder.
+    let textField: NSTextField?
 
     init(alert: ClassicAlert, theme: ClassicTheme, respond: @escaping (Int) -> Void) {
         self.alert = alert
         self.theme = theme
+        textField = alert.field.map { NSTextField(string: $0) }
         super.init(frame: .zero)
+        if let textField {
+            textField.font = theme.font(size: 12)
+            textField.textColor = .black
+            textField.backgroundColor = .white
+            textField.isBordered = true
+            textField.focusRingType = .none
+            textField.lineBreakMode = .byTruncatingTail
+            textField.cell?.usesSingleLineMode = true
+            textField.target = self
+            textField.action = #selector(returnPressed)
+            textField.delegate = self
+            addSubview(textField)
+        }
         // Shown right to left from the default, so the default ends up on the right.
         for (index, title) in alert.buttons.enumerated() {
-            let button = ClassicButton(title: title, isDefault: index == 0, theme: theme) { respond(index) }
+            let button = ClassicButton(title: title, isDefault: index == 0, theme: theme) { [unowned self] in
+                if let textField = self.textField { alert.field = textField.stringValue }
+                respond(index)
+            }
             buttons.append(button)
             addSubview(button)
         }
@@ -123,6 +146,13 @@ private final class AlertView: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    /// Esc in the line to type in is Cancel, as it is anywhere else in the alert.
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+        guard selector == #selector(NSResponder.cancelOperation(_:)) else { return false }
+        pressCancel()
+        return true
+    }
 
     override var isFlipped: Bool { true }
     private var style: MenuStyle { MenuStyle(theme.chrome) }
@@ -147,7 +177,12 @@ private final class AlertView: NSView {
         infoRect = alert.informativeText.isEmpty ? .zero
             : NSRect(x: left, y: messageRect.maxY + Metrics.paragraphGap, width: textWidth,
                      height: height(of: alert.informativeText, font: infoFont, width: textWidth))
-        let textBottom = max(iconRect.maxY, infoRect == .zero ? messageRect.maxY : infoRect.maxY)
+        var textBottom = max(iconRect.maxY, infoRect == .zero ? messageRect.maxY : infoRect.maxY)
+        if let textField {
+            let fieldHeight: CGFloat = 22
+            textField.frame = NSRect(x: left, y: textBottom + Metrics.paragraphGap, width: textWidth, height: fieldHeight)
+            textBottom = textField.frame.maxY
+        }
 
         var x = Metrics.width - Metrics.margin - frameInset + 4   // the ring's room outside the face
         let buttonTop = textBottom + Metrics.margin
@@ -171,6 +206,8 @@ private final class AlertView: NSView {
     }
 
     func pressDefault() { buttons.first?.flashAndPress() }
+
+    @objc private func returnPressed() { pressDefault() }
 
     func pressCancel() {
         let cancel = buttons.first { $0.title == "Cancel" } ?? buttons.last
