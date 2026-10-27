@@ -246,7 +246,8 @@ final class ResizeOutline: NSWindow {
         override func draw(_ dirtyRect: NSRect) {
             NSColor.clear.setFill()
             bounds.fill(using: .copy)
-            let top = ClassicFrameView.collapsedHeight(family: theme.chrome.family, style: style) * theme.scale
+            let top = ClassicFrameView.collapsedHeight(family: theme.chrome.family, style: style,
+                                                       titleBar: theme.chrome.titleBar) * theme.scale
             for (color, phase) in [(NSColor.white, CGFloat(0)), (NSColor.black, 2)] {
                 let path = NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5))
                 path.move(to: NSPoint(x: bounds.minX, y: top - 0.5))
@@ -512,16 +513,17 @@ public final class ClassicFrameView: NSView {
 
     /// The height of a collapsed window, in points.
     var collapsedHeight: CGFloat {
-        Self.collapsedHeight(family: family, style: style) * theme.scale
+        Self.collapsedHeight(family: family, style: style, titleBar: theme.chrome.titleBar) * theme.scale
     }
 
     /// In Mac OS 9 pixels: a Mac window's title bar, a BeOS window's tab, an OS/2 window's title bar in its border.
-    static func collapsedHeight(family: ChromeFamily, style: ClassicWindowStyle) -> CGFloat {
+    static func collapsedHeight(family: ChromeFamily, style: ClassicWindowStyle,
+                                titleBar: TitleBarStyle = .warp) -> CGFloat {
         switch family {
         case .macintosh: style.collapsedHeight
         case .aqua: WindowChromeLayout.collapsedHeight(for: style, aqua: true)
         case .beos: BeOSMetrics.tabHeight(for: style)
-        case .os2: OS2Metrics.collapsedHeight(for: style)
+        case .os2: OS2Metrics.collapsedHeight(for: style, titleBar: titleBar)
         case .amiga: AmigaMetrics.collapsedHeight(for: style)
         case .openLook: OpenLookMetrics.collapsedHeight(for: style)
         }
@@ -787,6 +789,7 @@ public final class ClassicFrameView: NSView {
     }
 
     private func drawOS2(_ layout: OS2ChromeLayout) {
+        if layout.titleStyle == .windows7 { return drawWindows7(layout) }
         let t = theme
         // The sizing border: raised all round, the title bar and the content set into it. Windows 95's is its
         // two-level bevel instead: light grey and black outside, white and dark grey inside.
@@ -804,7 +807,7 @@ public final class ClassicFrameView: NSView {
         if layout.titleStyle == .windows31 {
             // Its sizing border's notches, marking off the corners.
             t.border.setFill()
-            let f = OS2Metrics.frameWidth(for: style), c = layout.titleBar.height + f
+            let f = OS2Metrics.frameWidth(for: style, titleBar: layout.titleStyle), c = layout.titleBar.height + f
             for x in [bounds.minX + c, bounds.maxX - c] {
                 NSRect(x: x, y: bounds.minY, width: 1, height: f).fill()
                 NSRect(x: x, y: bounds.maxY - f, width: 1, height: f).fill()
@@ -857,7 +860,7 @@ public final class ClassicFrameView: NSView {
         switch titleStyle {
         case .windows31: return drawWindows31Button(rect, glyph: glyph, pressed: pressed, center: c)
         case .windows95: return drawWindows95Button(rect, glyph: glyph, pressed: pressed, center: c)
-        case .warp: break
+        case .windows7, .warp: break
         }
         t.drawButtonFace(rect, pressed: pressed)
         let ink = t.text
@@ -1110,6 +1113,133 @@ public final class ClassicFrameView: NSView {
         default:
             break
         }
+    }
+
+    // MARK: Windows 7
+
+    /// Aero: a frame of glass, light at the top and deeper below, a bright line inside its dark outline, the content
+    /// set into it with a thin border. The buttons hang from the top edge. Square and opaque.
+    private func drawWindows7(_ layout: OS2ChromeLayout) {
+        let t = theme
+        let glass = t.palette.titleTab
+        let top = NSColor(glass?.light ?? RGB(0xDCE9F7)), face = NSColor(glass?.face ?? RGB(0xA9C4E2))
+        let inactive = NSColor(glass?.inactiveFace ?? RGB(0xDDE5EE))
+        if isActive {
+            NSGradient(colors: [top, face, face])?.draw(in: bounds, angle: -90)   // flipped: light at the top
+            // The sheen across the caption: a paler band over its upper half.
+            NSColor(white: 1, alpha: t.chrome.isDark ? 0.07 : 0.28).setFill()
+            NSRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: layout.titleBar.midY).fill()
+        } else {
+            inactive.setFill()
+            bounds.fill()
+        }
+        t.drawOutline(bounds, color: NSColor(glass?.dark ?? RGB(0x4B6C94)))
+        NSColor(white: 1, alpha: t.chrome.isDark ? 0.18 : 0.6).setFill()
+        let inner = bounds.insetBy(dx: 1, dy: 1)
+        NSRect(x: inner.minX, y: inner.minY, width: inner.width, height: 1).fill()
+        NSRect(x: inner.minX, y: inner.minY, width: 1, height: inner.height).fill()
+        NSRect(x: inner.maxX - 1, y: inner.minY, width: 1, height: inner.height).fill()
+        NSRect(x: inner.minX, y: inner.maxY - 1, width: inner.width, height: 1).fill()
+
+        if !layout.isCollapsed, layout.content.height > 0 {
+            // The content is set into the glass, in the window's face colour (panes and bars draw over it).
+            t.background.setFill()
+            layout.content.fill()
+            t.drawOutline(layout.content.insetBy(dx: -1, dy: -1), color: NSColor(glass?.dark ?? RGB(0x4B6C94)))
+        }
+
+        let title = window?.title ?? ""
+        let titleRect = layout.titleRect(textWidth: t.textWidth(title, font: titleFont),
+                                         textHeight: ceil(titleFont.ascender - titleFont.descender))
+        let ink = isActive ? NSColor(glass?.text ?? RGB(0x000000))
+            : NSColor(glass?.inactiveText ?? t.palette.disabledText)
+        if isActive, !t.chrome.isDark {
+            // The glow that keeps a title legible on glass: the title in white, a pixel off each way.
+            for (dx, dy) in [(-1.0, 0.0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (1, -1), (-1, 1)] {
+                t.drawText(title, in: titleRect.offsetBy(dx: dx, dy: dy), font: titleFont,
+                           color: NSColor(white: 1, alpha: 0.55), alignment: .left)
+            }
+        }
+        t.drawText(title, in: titleRect, font: titleFont, color: ink, alignment: .left)
+
+        drawWindows7Icon(layout.systemMenu)
+        let pair = [layout.hideButton, layout.maximizeButton].compactMap { $0 }
+        if let first = pair.first, let last = pair.last {
+            drawWindows7Button(first.union(last), glyph: nil, red: false)
+        }
+        if let hide = layout.hideButton { drawWindows7Glyph(.hide, in: hide) }
+        if let maximize = layout.maximizeButton { drawWindows7Glyph(.zoom, in: maximize) }
+        if let close = layout.closeButton {
+            drawWindows7Button(close, glyph: .close, red: true)
+        }
+    }
+
+    /// A glass button: a rounded rectangle with a dark outline and a bright one inside, lighter above its midline.
+    /// Pressed, it darkens. Close is red.
+    private func drawWindows7Button(_ rect: CGRect, glyph: Box?, red: Bool) {
+        let t = theme
+        let pressed = glyph != nil && pressedBox == glyph
+        let dark = t.chrome.isDark
+        let (upper, lower): (NSColor, NSColor) = red
+            ? (pressed ? NSColor(srgbRed: 0.72, green: 0.2, blue: 0.14, alpha: 1)
+                       : NSColor(srgbRed: 0.89, green: 0.45, blue: 0.36, alpha: 1),
+               pressed ? NSColor(srgbRed: 0.55, green: 0.08, blue: 0.04, alpha: 1)
+                       : NSColor(srgbRed: 0.78, green: 0.2, blue: 0.1, alpha: 1))
+            : dark ? (NSColor(white: 0.38, alpha: 1), NSColor(white: 0.2, alpha: 1))
+                   : (NSColor(white: 0.97, alpha: 0.95), NSColor(srgbRed: 0.72, green: 0.8, blue: 0.9, alpha: 1))
+        let path = NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: 3, yRadius: 3)
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        upper.setFill()
+        NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height / 2).fill()
+        lower.setFill()
+        NSRect(x: rect.minX, y: rect.midY, width: rect.width, height: rect.height / 2 + 1).fill()
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor(white: 0, alpha: 0.55).setStroke()
+        path.lineWidth = 1
+        path.stroke()
+        NSColor(white: 1, alpha: 0.5).setStroke()
+        let inner = NSBezierPath(roundedRect: rect.insetBy(dx: 1.5, dy: 1.5), xRadius: 2, yRadius: 2)
+        inner.lineWidth = 1
+        inner.stroke()
+        if let glyph { drawWindows7Glyph(glyph, in: rect) }
+    }
+
+    private func drawWindows7Glyph(_ glyph: Box, in rect: CGRect) {
+        let pressed = pressedBox == glyph
+        let c = CGPoint(x: rect.midX + (pressed ? 0.5 : 0), y: rect.midY + (pressed ? 0.5 : 0))
+        let paths = NSBezierPath()
+        switch glyph {
+        case .hide:
+            paths.appendRect(NSRect(x: c.x - 4, y: c.y + 2, width: 8, height: 3))
+        case .zoom:
+            paths.appendRect(NSRect(x: c.x - 5, y: c.y - 4, width: 10, height: 8))
+        case .close:
+            paths.move(to: NSPoint(x: c.x - 4, y: c.y - 4)); paths.line(to: NSPoint(x: c.x + 4, y: c.y + 4))
+            paths.move(to: NSPoint(x: c.x + 4, y: c.y - 4)); paths.line(to: NSPoint(x: c.x - 4, y: c.y + 4))
+        default:
+            return
+        }
+        // A dark shadow under the white glyph keeps it readable on light glass.
+        NSColor(white: 0, alpha: 0.6).setStroke()
+        paths.lineWidth = glyph == .close ? 4 : 3
+        paths.stroke()
+        NSColor.white.setStroke()
+        paths.lineWidth = glyph == .close ? 2 : 1.5
+        paths.stroke()
+        if glyph == .hide { NSColor.white.setFill(); paths.fill() }
+    }
+
+    /// The window's icon: a small window, its caption blue.
+    private func drawWindows7Icon(_ rect: CGRect) {
+        let body = NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 2), xRadius: 2, yRadius: 2)
+        NSColor.white.setFill()
+        body.fill()
+        NSColor(srgbRed: 0.2, green: 0.45, blue: 0.8, alpha: 1).setFill()
+        NSRect(x: rect.minX + 1, y: rect.minY + 2, width: rect.width - 2, height: 4).fill()
+        NSColor(white: 0, alpha: 0.5).setStroke()
+        body.lineWidth = 1
+        body.stroke()
     }
 
     // MARK: Amiga

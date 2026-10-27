@@ -22,7 +22,7 @@ private extension String {
     }
 }
 
-/// A look: the shape of the windows, how tabs are drawn, and the colours everything is drawn from. Eight are built
+/// A look: the shape of the windows, how tabs are drawn, and the colours everything is drawn from. Many are built
 /// in; an app can make its own (often from one of these, with a few colours changed).
 public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     /// Stable across versions, for saving which one was chosen.
@@ -128,6 +128,13 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     /// Windows 95: its two-level bevels, the title at the left of a navy bar, minimize, maximize and close.
     public static let windows95 = ChromeTheme(id: "windows95", name: "Windows 95", family: .os2, palette: .windows95,
                                               textColors: .msdos, titleBar: .windows95)
+    /// Windows 7: Aero's glass frame in pale blue, the red close button; the text a console's, grey on black.
+    public static let windows7 = ChromeTheme(id: "windows7", name: "Windows 7", family: .os2, palette: .windows7,
+                                             textColors: .msdos, partner: "windows7Dark", titleBar: .windows7)
+    /// Windows 7's Aero in charcoal glass, as its dark themes and Windows 10's title bars went.
+    public static let windows7Dark = ChromeTheme(id: "windows7Dark", name: "Windows 7 Dark", family: .os2, isDark: true,
+                                                 palette: .windows7Dark, textColors: .msdos, partner: "windows7",
+                                                 titleBar: .windows7)
     /// Workbench 3.1: grey windows, the active one blue; a Shell's black on grey.
     public static let workbench = ChromeTheme(id: "workbench", name: "Workbench", family: .amiga, tabStyle: .folder,
                                               palette: .workbench, textColors: .workbench, partner: "workbench13")
@@ -138,7 +145,7 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
 
     public static let builtIn: [ChromeTheme] = [
         .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
-        .windows31, .windows95, .workbench, .workbench13, .openLook, .aqua, .aquaGraphite,
+        .windows31, .windows95, .windows7, .windows7Dark, .workbench, .workbench13, .openLook, .aqua, .aquaGraphite,
     ]
 
     /// Mac OS X's Aqua, as Jaguar and Panther drew it: pinstripes, and buttons like blue gel.
@@ -295,6 +302,25 @@ public struct Palette: Hashable, Sendable {
         content: RGB(0xFFFFFF), contentText: RGB(0x000000),
         titleTab: TitleTabColors(face: RGB(0x000080), light: RGB(0x1084D0), dark: RGB(0x000040),
                                  inactiveFace: RGB(0x808080), text: RGB(0xFFFFFF), inactiveText: RGB(0xC0C0C0)))
+
+    /// Windows 7's Aero Basic-ish scheme: Control-panel grey faces, a light selection blue, glass the colour of
+    /// a clear sky. From screenshots: approximate.
+    public static let windows7 = Palette(
+        background: RGB(0xF0F0F0), light: RGB(0xFFFFFF), dark: RGB(0xA0A0A0), border: RGB(0x707070),
+        well: RGB(0xE3E3E3), highlight: RGB(0x3399FF), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x6D6D6D), pinstripe: RGB(0xF0F0F0), thumb: RGB(0xE5E5E5),
+        content: RGB(0xFFFFFF), contentText: RGB(0x000000),
+        titleTab: TitleTabColors(face: RGB(0xA9C4E2), light: RGB(0xDCE9F7), dark: RGB(0x4B6C94),
+                                 inactiveFace: RGB(0xDDE5EE), text: RGB(0x000000), inactiveText: RGB(0x555555)))
+
+    /// Aero in charcoal: dark faces and glass, the same selection blue a little deeper.
+    public static let windows7Dark = Palette(
+        background: RGB(0x2B2B2B), light: RGB(0x4A4A4A), dark: RGB(0x151515), border: RGB(0x0E0E0E),
+        well: RGB(0x202020), highlight: RGB(0x2F76C4), text: RGB(0xEAEAEA), selectedText: RGB(0xFFFFFF),
+        disabledText: RGB(0x808080), pinstripe: RGB(0x2B2B2B), thumb: RGB(0x4A4A4A),
+        content: RGB(0x1E1E1E), contentText: RGB(0xDDDDDD),
+        titleTab: TitleTabColors(face: RGB(0x3C434C), light: RGB(0x66707C), dark: RGB(0x14181C),
+                                 inactiveFace: RGB(0x2B2F34), text: RGB(0xF0F0F0), inactiveText: RGB(0x8A8A8A)))
 
     /// Workbench 2.0 and 3.1's four colours: grey, black, white and blue.
     public static let workbench = Palette(

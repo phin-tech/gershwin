@@ -48,9 +48,9 @@ private func frameView(_ style: ClassicWindowStyle, _ theme: ClassicTheme, size:
     return view
 }
 
-/// The themes whose windows are outlined, a bevel inside the outline: all but Windows 95's, the Amiga's and Aqua's.
+/// The themes whose windows are outlined, a bevel inside the outline: all but Windows 95's, the Amiga's, Aqua's and Windows 7's.
 private let outlined = ClassicTheme.all.filter {
-    $0.chrome.titleBar != .windows95 && $0.chrome.family != .amiga && $0.chrome.family != .aqua
+    $0.chrome.titleBar != .windows95 && $0.chrome.titleBar != .windows7 && $0.chrome.family != .amiga && $0.chrome.family != .aqua
 }
 
 @MainActor
@@ -679,4 +679,16 @@ func alertWithAFieldHasRoomForItAboveItsButtons(chrome: ChromeTheme) throws {
     let button = try #require(view.subviews.compactMap { $0 as? ClassicButton }.first)
     #expect(field.frame.maxY <= button.frame.minY)
     #expect(plain.view(theme: theme).subviews.compactMap { $0 as? NSTextField }.isEmpty)
+}
+
+@MainActor
+@Test(arguments: [ChromeTheme.windows7, .windows7Dark])
+func aWindows7WindowIsGlassWithABrightLineInsideItsOutline(chrome: ChromeTheme) throws {
+    let rep = try render(frameView(.panel, ClassicTheme(chrome)))
+    let glass = try #require(chrome.palette.titleTab)
+    #expect(rep(0, 0) == glass.dark)                       // the outline
+    #expect(rep(150, 100) == chrome.palette.background)     // the content area
+    // Down the side, the glass is the active face; the inactive window is paler (or darker) all over.
+    let sideTop = rep(2, 60), sideBottom = rep(2, 150)
+    #expect(sideTop != chrome.palette.background && sideBottom != chrome.palette.background)
 }

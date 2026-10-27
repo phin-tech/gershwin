@@ -1,14 +1,16 @@
 # Gershwin
 
-Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1 and 95, the Amiga's Workbench,
+Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1, 95 and 7, the Amiga's Workbench,
 Sun's OPEN LOOK and Mac OS X's Aqua drew them, for AppKit and SwiftUI on macOS 14 and
 later. Named for the planned successor to Copland, the Mac OS that never shipped.
 
-Eighteen themes are built in: **Platinum** (Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9
+Twenty themes are built in: **Platinum** (Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9
 had none), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
 **System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**, **OS/2 Warp** and **OS/2 Warp
 Dark** (a sizing border round a blue title bar, the system menu at its left; the dark one is new, Warp had none),
-**Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), and the Amiga's **Workbench** (3.1) and
+**Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), **Windows 7** and **Windows 7 Dark**
+(Aero: a glass frame with a bright line inside its outline, glass minimize and maximize buttons and a red close
+button hung from the top edge, the title at the left with its glow; square and opaque, and the dark one is new), and the Amiga's **Workbench** (3.1) and
 **Workbench 1.3** (the drag bar between the close gadget and the zoom and depth gadgets, the scroll bar's arrows
 together above the size gadget), and Sun's **OPEN LOOK** (a window menu button for boxes, a resize corner in each
 corner, pushpins on pop-ups, and the elevator scroll bar riding its cable), and Mac OS X's **Aqua** and **Aqua

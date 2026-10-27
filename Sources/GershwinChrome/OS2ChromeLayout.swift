@@ -9,6 +9,9 @@ public enum TitleBarStyle: Sendable {
     case windows31
     /// Windows 95: a small icon, the title at the left, and minimize, maximize and, apart, close.
     case windows95
+    /// Windows 7's Aero: a thick glass frame, a small icon, the title at the left (with a glow), and glassy minimize,
+    /// maximize and a red close button hung from the top edge. Drawn square and opaque: there is no desktop to see through.
+    case windows7
 }
 
 /// The sizes of an OS/2 Warp window's parts, in points, as Warp 4 drew them at its default resolution.
@@ -23,14 +26,35 @@ public enum OS2Metrics {
     }
 
     public static func titleBarHeight(for style: ClassicWindowStyle) -> CGFloat { style == .utility ? 14 : 20 }
+
+    /// Aero's frame is thicker at the sides and bottom, and thin above the caption, where its buttons hang.
+    public static func frameWidth(for style: ClassicWindowStyle, titleBar: TitleBarStyle) -> CGFloat {
+        guard titleBar == .windows7 else { return frameWidth(for: style) }
+        switch style {
+        case .document: return 7
+        case .panel: return 6
+        case .utility: return 4
+        }
+    }
+
+    /// From the window's top edge to its title bar.
+    public static func topInset(for style: ClassicWindowStyle, titleBar: TitleBarStyle) -> CGFloat {
+        titleBar == .windows7 ? 2 : frameWidth(for: style)
+    }
+
+    public static func titleBarHeight(for style: ClassicWindowStyle, titleBar: TitleBarStyle) -> CGFloat {
+        guard titleBar == .windows7 else { return titleBarHeight(for: style) }
+        return style == .utility ? 20 : 26
+    }
     /// The title bar's buttons are squares, a pixel short of the title bar at each end.
     public static func buttonSize(for style: ClassicWindowStyle) -> CGFloat { titleBarHeight(for: style) - 2 }
     /// Between the hide and maximize buttons and the close button.
     public static let closeGap: CGFloat = 2
     public static let scrollBarWidth: CGFloat = 16
     /// A collapsed window (which OS/2 never had; Window ▸ Collapse still works): its title bar in its frame.
-    public static func collapsedHeight(for style: ClassicWindowStyle) -> CGFloat {
-        titleBarHeight(for: style) + frameWidth(for: style) * 2
+    public static func collapsedHeight(for style: ClassicWindowStyle, titleBar: TitleBarStyle = .warp) -> CGFloat {
+        topInset(for: style, titleBar: titleBar) + titleBarHeight(for: style, titleBar: titleBar)
+            + frameWidth(for: style, titleBar: titleBar)
     }
 }
 
@@ -65,9 +89,10 @@ public struct OS2ChromeLayout: Equatable, Sendable {
         self.style = style
         self.isCollapsed = isCollapsed
         self.titleStyle = titleStyle
-        let frame = M.frameWidth(for: style)
-        titleBar = CGRect(x: bounds.minX + frame, y: bounds.minY + frame,
-                          width: max(0, bounds.width - frame * 2), height: M.titleBarHeight(for: style))
+        let frame = M.frameWidth(for: style, titleBar: titleStyle)
+        titleBar = CGRect(x: bounds.minX + frame, y: bounds.minY + M.topInset(for: style, titleBar: titleStyle),
+                          width: max(0, bounds.width - frame * 2),
+                          height: M.titleBarHeight(for: style, titleBar: titleStyle))
         switch titleStyle {
         case .warp, .windows31:
             let size = M.buttonSize(for: style)
@@ -85,6 +110,18 @@ public struct OS2ChromeLayout: Equatable, Sendable {
                 maximizeButton = style == .document ? maximize : nil
                 hideButton = style == .document ? maximize.offsetBy(dx: -size, dy: 0) : nil
             }
+        case .windows7:
+            // Glass buttons hung from the top edge, joined, the close button wider and flush with the frame.
+            let height: CGFloat = style == .utility ? 16 : 20
+            let y = bounds.minY + 1
+            let close = CGRect(x: bounds.maxX - frame - (style == .utility ? 36 : 47) + 2, y: y,
+                               width: style == .utility ? 36 : 47, height: height)
+            closeButton = close
+            let maximize = CGRect(x: close.minX - 27, y: y, width: 27, height: height)
+            maximizeButton = style == .document ? maximize : nil
+            hideButton = style == .document ? CGRect(x: maximize.minX - 29, y: y, width: 29, height: height) : nil
+            systemMenu = CGRect(x: titleBar.minX + 2, y: titleBar.minY + (titleBar.height - 16) / 2 - 2, width: 16,
+                                height: 16)
         case .windows95:
             // Smaller buttons, two pixels in, a gap before close; the icon a 16-pixel square.
             let height = titleBar.height - 4, width = height + 2
@@ -127,10 +164,13 @@ public struct OS2ChromeLayout: Equatable, Sendable {
     /// Where a title `textWidth` wide goes: centred in the title bar (Windows 95's beside the icon), kept clear of the
     /// buttons either side.
     public func titleRect(textWidth: CGFloat, textHeight: CGFloat) -> CGRect {
+        let leftAligned = titleStyle == .windows95 || titleStyle == .windows7
         let left = systemMenu.maxX + (titleStyle == .windows95 ? 3 : 6)
         let right = (buttons.first?.minX ?? titleBar.maxX) - 6
         let width = min(textWidth, max(0, right - left))
-        let x = titleStyle == .windows95 ? left : min(max(titleBar.midX - width / 2, left), right - width)
-        return CGRect(x: x, y: titleBar.midY - textHeight / 2, width: width, height: textHeight)
+        let x = leftAligned ? left : min(max(titleBar.midX - width / 2, left), right - width)
+        // Aero's title is level with its buttons, which hang above the middle of the caption.
+        let middle = titleStyle == .windows7 ? (closeButton?.midY ?? titleBar.midY) : titleBar.midY
+        return CGRect(x: x, y: middle - textHeight / 2, width: width, height: textHeight)
     }
 }
