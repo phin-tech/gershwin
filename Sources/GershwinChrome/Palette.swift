@@ -11,6 +11,9 @@ public struct PaletteEntry: Sendable {
     /// A shortcut as the menus show it ("⇧⌘P"), for the palette to draw; nothing here makes it work.
     public var shortcut: String?
     public var perform: @MainActor @Sendable () -> Void
+    /// For an entry that opens a list of its own (a workspace's agents, a folder's files) rather than doing something:
+    /// choosing it shows these, and Esc comes back. Asked for when the entry is chosen, so they can be made then.
+    public var children: (@MainActor @Sendable () -> [PaletteEntry])?
 
     public init(id: String, title: String, detail: String? = nil, group: String = "", shortcut: String? = nil,
                 perform: @escaping @MainActor @Sendable () -> Void) {
@@ -21,6 +24,15 @@ public struct PaletteEntry: Sendable {
         self.shortcut = shortcut
         self.perform = perform
     }
+
+    /// An entry that opens a list of `children` when it's chosen.
+    public init(id: String, title: String, detail: String? = nil, group: String = "", shortcut: String? = nil,
+                opens children: @escaping @MainActor @Sendable () -> [PaletteEntry]) {
+        self.init(id: id, title: title, detail: detail, group: group, shortcut: shortcut, perform: {})
+        self.children = children
+    }
+
+    public var opensList: Bool { children != nil }
 }
 
 /// The ids of what was chosen lately, most recent first, so what a person reaches for floats up.
@@ -70,8 +82,8 @@ public enum PaletteMatcher {
         }
         matches.sort { a, b in
             if a.match.score != b.match.score { return a.match.score > b.match.score }
-            // Of equal scores the shorter title is the closer match.
-            if a.match.entry.title.count != b.match.entry.title.count {
+            // Of equal scores the shorter title is the closer match; with nothing typed, none is, and the order given stands.
+            if !words.isEmpty, a.match.entry.title.count != b.match.entry.title.count {
                 return a.match.entry.title.count < b.match.entry.title.count
             }
             return a.index < b.index

@@ -114,9 +114,9 @@ final class Demo: NSObject, NSApplicationDelegate {
             })
         }
         if late {
-            all.append(PaletteEntry(id: "herdr:api", title: "Herdr: api workspace", detail: "3 agents", group: "Herdr") { [weak self] in
-                self?.chose("Focused Herdr's api workspace")
-            })
+            // An entry that opens lists of its own: choose it and Return shows the workspaces, and one of those its agents.
+            all.append(PaletteEntry(id: "herdr", title: "Herdr: workspaces", detail: "2 workspaces", group: "Herdr",
+                                    opens: { [weak self] in self?.workspaces() ?? [] }))
             all.append(PaletteEntry(id: "herdr:new", title: "Herdr: new worker", group: "Herdr") { [weak self] in
                 self?.chose("Started a Herdr worker")
             })
@@ -128,6 +128,19 @@ final class Demo: NSObject, NSApplicationDelegate {
             })
         }
         return all
+    }
+
+    private func workspaces() -> [PaletteEntry] {
+        [("api", ["planner", "coder", "reviewer"]), ("web", ["designer", "coder"])].map { name, agents in
+            PaletteEntry(id: "herdr:ws:\(name)", title: "\(name) workspace", detail: "\(agents.count) agents",
+                         group: "Workspace", opens: {
+                agents.map { agent in
+                    PaletteEntry(id: "herdr:agent:\(name)/\(agent)", title: agent, detail: "in \(name)", group: "Agent") {
+                        [weak self] in self?.chose("Focused \(agent) in the \(name) workspace")
+                    }
+                }
+            })
+        }
     }
 
     private func showPalette(query: String = "") {
@@ -161,7 +174,8 @@ final class Demo: NSObject, NSApplicationDelegate {
             ⇧⌘P opens it. Type to narrow it, ↑ and ↓ to move, Return to choose, Esc to close.
 
             Try: “sr” for Split Right; “theme beos”; “tab 3”; a word with no match runs as a shell command. \
-            Herdr's entries turn up a moment after it opens.
+            Herdr's entries turn up a moment after it opens; \
+            “Herdr: workspaces” opens a list of its own (Esc or ⌫ goes back).
 
             Last chosen: \(lastChosen)
             """
@@ -209,7 +223,13 @@ final class Demo: NSObject, NSApplicationDelegate {
     /// `--snapshot out.png`: opens the palette (narrowed by `--query`), writes its window to the file and quits.
     private func snapshot(to path: String) {
         showPalette(query: arguments["--query"] ?? "")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) { [weak self] in
+        // `--open herdr --open herdr:ws:api`: chosen in turn once the late entries are in, to see a list inside a list.
+        let opens = CommandLine.arguments.enumerated().filter { $0.element == "--open" }
+            .compactMap { CommandLine.arguments.indices.contains($0.offset + 1) ? CommandLine.arguments[$0.offset + 1] : nil }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            for id in opens { self?.palette.choose(id: id) }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
             guard let self, let view = palette.window?.contentView,
                   let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { exit(1) }
             view.cacheDisplay(in: view.bounds, to: rep)

@@ -14,6 +14,12 @@ private func titles(_ matches: [PaletteMatch]) -> [String] { matches.map(\.entry
     #expect(titles(PaletteMatcher.rank("   ", all)) == ["New Tab", "Close Tab", "Split Right"])
 }
 
+@Test func anEmptyQueryDoesntReorderByTitleLength() {
+    // With nothing typed there is no "closer match": the app's order (menus, then tabs) is the one to show.
+    let all = [entry("Split Right"), entry("Close Tab"), entry("New")]
+    #expect(titles(PaletteMatcher.rank("", all)) == ["Split Right", "Close Tab", "New"])
+}
+
 @Test func whatWasChosenLatelyComesFirstForAnEmptyQuery() {
     let all = [entry("New Tab"), entry("Close Tab"), entry("Split Right")]
     var history = PaletteHistory()

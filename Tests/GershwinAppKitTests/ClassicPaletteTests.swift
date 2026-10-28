@@ -120,3 +120,156 @@ func everyThemeDrawsTheList(theme: ClassicTheme) throws {
     #expect((palette.window?.firstResponder as? NSTextView)?.delegate is NSTextField)
     palette.hide()
 }
+
+// MARK: Lists inside lists
+
+@MainActor
+private func folder(_ title: String, _ children: @escaping @MainActor @Sendable () -> [PaletteEntry]) -> PaletteEntry {
+    PaletteEntry(id: title, title: title, group: "List", opens: children)
+}
+
+@MainActor
+private func titles(_ palette: ClassicPalette) -> [String] {
+    palette.content?.matches.map(\.entry.title) ?? []
+}
+
+@MainActor
+@Test func choosingAnEntryThatOpensAListShowsItsChildrenInsteadOfClosing() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [entry("New Tab"), folder("Herdr") { [entry("api"), entry("web")] }])
+    palette.content?.search("herdr")
+    palette.content?.chooseSelected()
+    #expect(palette.isVisible)
+    #expect(palette.depth == 1)
+    #expect(titles(palette) == ["api", "web"])
+    #expect(palette.content?.query == "")
+    #expect(palette.window?.title == "Command Palette ▸ Herdr")
+    palette.hide()
+}
+
+@MainActor
+@Test func theChildrenAreMadeWhenTheEntryIsChosenNotBefore() {
+    final class Counter: @unchecked Sendable { var made = 0 }
+    let counter = Counter()
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [folder("Herdr") { counter.made += 1; return [entry("api")] }])
+    #expect(counter.made == 0)
+    palette.content?.chooseSelected()
+    #expect(counter.made == 1)
+    palette.hide()
+}
+
+@MainActor
+@Test func backReturnsToTheListAsItWasLeft() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [entry("New Tab"), entry("Close Tab"), folder("Herdr") { [entry("api")] }, entry("Split")])
+    palette.content?.search("t")
+    palette.content?.move(by: 1)
+    let before = palette.content?.matches.map(\.entry.title)
+    let row = palette.content?.selected
+    palette.content?.search("herdr")
+    palette.content?.chooseSelected()
+    #expect(palette.depth == 1)
+    // ⌫ in an empty field goes back, with the text and the row as they were left (not as typed to get here).
+    palette.content?.onBack?()
+    #expect(palette.depth == 0)
+    #expect(palette.content?.query == "herdr")
+    #expect(palette.window?.title == "Command Palette")
+    palette.content?.search("t")
+    #expect(palette.content?.matches.map(\.entry.title) == before)
+    #expect(row != nil)
+    palette.hide()
+}
+
+@MainActor
+@Test func escGoesBackOneListAndOnlyClosesFromTheFirst() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [folder("A") { [folder("B") { [entry("leaf")] }] }])
+    palette.content?.chooseSelected()
+    palette.content?.chooseSelected()
+    #expect(palette.depth == 2)
+    #expect(palette.window?.title == "Command Palette ▸ A ▸ B")
+    palette.content?.onCancel?()
+    #expect(palette.depth == 1 && palette.isVisible)
+    palette.content?.onCancel?()
+    #expect(palette.depth == 0 && palette.isVisible)
+    palette.content?.onCancel?()
+    #expect(!palette.isVisible)
+}
+
+@MainActor
+@Test func backspaceOnTheFirstListDoesNothing() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [entry("New Tab")])
+    palette.content?.onBack?()
+    #expect(palette.isVisible && palette.depth == 0)
+    palette.hide()
+}
+
+@MainActor
+@Test func onlyTheEntryActuallyChosenIsRemembered() async throws {
+    final class Ran: @unchecked Sendable { var titles: [String] = [] }
+    let ran = Ran()
+    let palette = ClassicPalette(theme: .platinum)
+    let leaf = PaletteEntry(id: "leaf", title: "api", group: "Herdr") { ran.titles.append("api") }
+    palette.show(entries: [folder("Herdr") { [leaf] }])
+    palette.content?.chooseSelected()
+    #expect(palette.history.recent.isEmpty)
+    palette.content?.chooseSelected()
+    #expect(palette.history.recent == ["leaf"])
+    #expect(!palette.isVisible)
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(ran.titles == ["api"])
+}
+
+@MainActor
+@Test func theOpeningListsQueryHookIsQuietInsideAnEntry() {
+    var heard: [String] = []
+    let palette = ClassicPalette(theme: .platinum)
+    palette.onQueryChange = { heard.append($0) }
+    palette.show(entries: [folder("Herdr") { [entry("api")] }])
+    palette.content?.search("he")
+    palette.content?.chooseSelected()
+    palette.content?.search("ap")
+    #expect(heard == ["he"])
+    palette.hide()
+}
+
+@MainActor
+@Test func updateReplacesTheListBeingShown() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [folder("Herdr") { [] }])
+    palette.content?.chooseSelected()
+    #expect(titles(palette).isEmpty)
+    palette.update(entries: [entry("late one")])
+    #expect(titles(palette) == ["late one"])
+    // Back to the opening list: it's as it was, not what the nested update put in.
+    palette.content?.onBack?()
+    #expect(titles(palette) == ["Herdr"])
+    palette.hide()
+}
+
+@MainActor
+@Test func anEntryThatOpensAListDrawsAMarker() throws {
+    // The second row isn't selected, so it's on the well's own colour; the marker is at the right edge of the row,
+    // past the group's column, where a row that opens nothing has only that colour.
+    let marked = view([entry("a"), PaletteEntry(id: "f", title: "Herdr", opens: { [] })])
+    let plain = view([entry("a"), entry("Herdr", group: "")])
+    let content = ClassicTheme.platinum.palette.content
+    func inked(_ v: ClassicPaletteView) throws -> Bool {
+        for y in 56...62 { for x in 396...404 where try pixel(v, x, y) != content { return true } }
+        return false
+    }
+    #expect(try inked(plain) == false)
+    #expect(try inked(marked))
+}
+
+@MainActor
+@Test func anAppCanChooseAnEntryByIDToOpenIntoItsList() {
+    let palette = ClassicPalette(theme: .platinum)
+    palette.show(entries: [entry("New Tab"), PaletteEntry(id: "herdr", title: "Herdr", opens: { [entry("api")] })])
+    #expect(palette.choose(id: "nothing") == false)
+    #expect(palette.choose(id: "herdr"))
+    #expect(palette.depth == 1 && titles(palette) == ["api"])
+    palette.hide()
+}

@@ -34,9 +34,29 @@ public final class ClassicPalette {
 
     public var isVisible: Bool { window?.isVisible ?? false }
 
+    /// How many entries deep the palette is: 0 on the list it opened with.
+    public var depth: Int { max(0, levels.count - 1) }
+
+    /// The entries of the list being shown, before any text narrows them.
+    public var entries: [PaletteEntry] { levels.last?.entries ?? [] }
+
+    /// Back to the list this one was opened from, as Esc does; nothing on the first list.
+    public func goBack() {
+        back(orClose: false)
+    }
+
     /// The window, once it's been shown.
     public private(set) var window: ClassicWindow?
-    private var content: ClassicPaletteView?
+    private(set) var content: ClassicPaletteView?
+    /// The lists being shown, the first the one the palette opened on; each after it was opened by an entry. What was
+    /// typed and chosen in a list is kept while the one over it is shown, for coming back to.
+    private struct Level {
+        var title: String?
+        var entries: [PaletteEntry]
+        var query = ""
+        var selected = 0
+    }
+    private var levels: [Level] = []
     private var previousKeyWindow: NSWindow?
     private var closing: NSObjectProtocol?
 
@@ -52,8 +72,10 @@ public final class ClassicPalette {
     /// Opens the palette over `entries`, with `query` already typed (for a palette that opens narrowed, to tabs say).
     public func show(entries: [PaletteEntry], query: String = "") {
         let view = makeContent()
+        levels = [Level(title: nil, entries: entries, query: query)]
         view.reset(entries: entries, query: query)
         let window = makeWindow(content: view)
+        window.title = windowTitle
         if !window.isVisible {
             previousKeyWindow = NSApp.keyWindow.flatMap { $0 === window ? nil : $0 }
             window.center()
@@ -66,9 +88,26 @@ public final class ClassicPalette {
         DispatchQueue.main.async { [weak view] in view?.focus() }
     }
 
-    /// Replaces the entries while it's open (a script's came in late, or depend on what was typed), keeping the text.
+    /// Replaces the entries of the list being shown while it's open (a script's came in late, or depend on what was
+    /// typed), keeping the text. An app that fills the opening list late should check `depth` first: by then the person
+    /// may have gone into an entry.
     public func update(entries: [PaletteEntry]) {
+        if !levels.isEmpty { levels[levels.count - 1].entries = entries }
         content?.setEntries(entries)
+    }
+
+    /// Chooses the entry with this id in the list being shown, as Return on it would: false if there isn't one. For an
+    /// app that opens the palette straight into one of its lists.
+    @discardableResult
+    public func choose(id: String) -> Bool {
+        guard let entry = levels.last?.entries.first(where: { $0.id == id }) else { return false }
+        choose(entry)
+        return true
+    }
+
+    /// The title bar's text: `title`, then the entries that were opened to get here ("Command Palette ▸ Herdr").
+    private var windowTitle: String {
+        ([title] + levels.compactMap(\.title)).joined(separator: " ▸ ")
     }
 
     public func hide() {
@@ -80,9 +119,14 @@ public final class ClassicPalette {
         if let content { return content }
         let view = ClassicPaletteView(theme: theme, visibleRows: visibleRows)
         view.placeholder = placeholder
-        view.onQueryChange = { [weak self] in self?.onQueryChange?($0) }
+        // The opening list's app-supplied entries depend on the text; a list an entry opened doesn't.
+        view.onQueryChange = { [weak self] in
+            guard let self, depth == 0 else { return }
+            onQueryChange?($0)
+        }
         view.onChoose = { [weak self] entry in self?.choose(entry) }
-        view.onCancel = { [weak self] in self?.hide() }
+        view.onCancel = { [weak self] in self?.back(orClose: true) }
+        view.onBack = { [weak self] in self?.back(orClose: false) }
         view.history = { [weak self] in self?.history ?? PaletteHistory() }
         content = view
         return view
@@ -119,7 +163,29 @@ public final class ClassicPalette {
         if let key, key.isVisible { key.makeKeyAndOrderFront(nil) }
     }
 
+    /// Esc, or ⌫ in an empty field: the list this one was opened from, as it was left; on the first list, Esc closes
+    /// the palette and ⌫ does nothing.
+    private func back(orClose close: Bool) {
+        guard levels.count > 1, let content else {
+            if close { hide() }
+            return
+        }
+        levels.removeLast()
+        let level = levels[levels.count - 1]
+        content.restore(entries: level.entries, query: level.query, selected: level.selected)
+        window?.title = windowTitle
+    }
+
     private func choose(_ entry: PaletteEntry) {
+        if let children = entry.children, let content {
+            levels[levels.count - 1].query = content.query
+            levels[levels.count - 1].selected = content.selected
+            let entries = children()
+            levels.append(Level(title: entry.title, entries: entries))
+            content.reset(entries: entries)
+            window?.title = windowTitle
+            return
+        }
         history.record(entry.id)
         onHistoryChange?(history)
         hide()
@@ -148,6 +214,7 @@ final class ClassicPaletteView: NSView {
     var onQueryChange: ((String) -> Void)?
     var onChoose: ((PaletteEntry) -> Void)?
     var onCancel: (() -> Void)?
+    var onBack: (() -> Void)?
     var history: () -> PaletteHistory = { PaletteHistory() }
 
     private let input: ClassicTextField
@@ -164,7 +231,7 @@ final class ClassicPaletteView: NSView {
         static let rowHeight: CGFloat = 18
         static let textInset: CGFloat = 6
         static let groupWidth: CGFloat = 56
-        static let shortcutWidth: CGFloat = 44
+        static let shortcutWidth: CGFloat = 58
         static let gap: CGFloat = 8
         static let fontSize: CGFloat = 12
         static let smallFontSize: CGFloat = 10
@@ -179,6 +246,7 @@ final class ClassicPaletteView: NSView {
         input.onSubmit = { [weak self] _ in self?.chooseSelected() }
         input.onCancel = { [weak self] in self?.onCancel?() }
         input.onMove = { [weak self] step in self?.move(by: step) }
+        input.onDeleteWhenEmpty = { [weak self] in self?.onBack?() }
         addSubview(input)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .activeAlways, .inVisibleRect], owner: self))
     }
@@ -198,6 +266,19 @@ final class ClassicPaletteView: NSView {
         selected = 0
         first = 0
         refilter(keepingSelection: false)
+    }
+
+    /// The text typed so far.
+    var query: String { input.stringValue }
+
+    /// A list shown again, as it was left: its text, narrowed again, and the row that was chosen.
+    func restore(entries: [PaletteEntry], query: String, selected: Int) {
+        input.stringValue = query
+        self.entries = entries
+        refilter(keepingSelection: false)
+        self.selected = min(max(selected, 0), max(0, matches.count - 1))
+        keepSelectionVisible()
+        needsDisplay = true
     }
 
     /// New entries under the text as it is.
@@ -333,6 +414,12 @@ final class ClassicPaletteView: NSView {
         let small = ClassicTheme.smallFont(size: Metrics.smallFontSize * s)
         let inset = Metrics.textInset * s
         var right = rect.maxX - inset
+        // An entry that opens a list says so, as a menu's submenu rows do.
+        if match.entry.opensList {
+            let r = NSRect(x: right - 10 * s, y: rect.minY, width: 10 * s, height: rect.height)
+            t.drawText("▸", in: r, font: font, color: dim, alignment: .right)
+            right = r.minX - 4 * s
+        }
         // The group, at the right edge, and the shortcut before it.
         if !match.entry.group.isEmpty {
             let r = NSRect(x: right - Metrics.groupWidth * s, y: rect.minY, width: Metrics.groupWidth * s, height: rect.height)
