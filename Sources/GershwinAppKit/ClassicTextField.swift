@@ -34,6 +34,10 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
     /// Return (with the shift key's state, for "the one before"), and Esc.
     public var onSubmit: ((_ shift: Bool) -> Void)?
     public var onCancel: (() -> Void)?
+    /// ↑ (-1) and ↓ (1), for a field that sits over a list, as a search box does. Without it the arrows move the caret.
+    public var onMove: ((_ step: Int) -> Void)?
+    /// ⌫ with nothing in the field, for a search box that goes back a level when there's nothing left to delete.
+    public var onDeleteWhenEmpty: (() -> Void)?
 
     /// The NSTextField that holds the text, for its first-responder status and accessibility.
     public let field: NSTextField = FocusReportingField()
@@ -210,6 +214,18 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
         case #selector(NSResponder.cancelOperation(_:)):
             guard let onCancel else { return false }
             onCancel()
+            return true
+        case #selector(NSResponder.deleteBackward(_:)):
+            guard let onDeleteWhenEmpty, textView.string.isEmpty else { return false }
+            onDeleteWhenEmpty()
+            return true
+        case #selector(NSResponder.moveUp(_:)):
+            guard let onMove else { return false }
+            onMove(-1)
+            return true
+        case #selector(NSResponder.moveDown(_:)):
+            guard let onMove else { return false }
+            onMove(1)
             return true
         default:
             return false

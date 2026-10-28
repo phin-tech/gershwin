@@ -47,6 +47,12 @@ app can make its own.
   - Adjustable panes (`ClassicSplitView`, over a `SplitTree` of the app's own views, which it never re-parents):
     each era's divider (Platinum's bevelled bar and split box, MPW's double line, Haiku's, OS/2's split bar), a scroll
     bar for each pane, the one being typed in drawn active, and dividers dragged with an outline.
+  - A command palette (`ClassicPalette`): a floating utility window with an edit-text field over a list in a sunken
+    well, in the theme's own style. The app gives it `PaletteEntry` values (a title, a group, an optional detail and
+    shortcut, and what choosing it does), so it knows nothing about what they are; `PaletteEntry.entries(from:)` makes
+    them from an NSMenu. Typing narrows the list by fuzzy match (`PaletteMatcher`, in GershwinChrome, with the matched
+    letters underlined), what was chosen lately floats up (`PaletteHistory`), and `update(entries:)` brings in entries
+    that arrive late. `swift run PaletteDemo` in `Examples/PaletteDemo` tries it.
   - A progress bar in a document window's placard (`placardProgress`), and Mac OS 8's drop highlight
     (`ClassicDropHighlight`), to show over a view while something dragged over it can drop there.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,
