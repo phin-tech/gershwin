@@ -44,7 +44,7 @@ final class Demo: NSObject, NSApplicationDelegate {
     private let palette: ClassicPalette
     private let window: ClassicWindow
     private let status: StatusView
-    private var tabs = ["zsh — ~/src/gershwin", "vim notes.md", "htop", "ssh luigi"]
+    private var tabs = ["zsh — ~/src/gershwin", "vim notes.md", "htop", "ssh server"]
     private var lastChosen = "nothing yet"
     private let arguments: [String: String]
 
