@@ -104,7 +104,7 @@ public struct TextColors: Hashable, Sendable {
         ])
 
     /// One bit: every colour is black, as it was in 1984, except white, which is grey enough to read.
-    public static let system1 = TextColors(
+    public static let monochrome = TextColors(
         foreground: RGB(0x000000), background: RGB(0xFFFFFF), cursor: RGB(0x000000),
         selectionBackground: RGB(0x000000), selectionForeground: RGB(0xFFFFFF),
         ansi: Array(repeating: RGB(0x000000), count: 7) + [RGB(0x808080)]

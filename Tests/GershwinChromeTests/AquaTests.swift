@@ -39,6 +39,6 @@ private let window = WindowChromeLayout(bounds: CGRect(x: 0, y: 0, width: 400, h
 }
 
 @Test func theAquaThemesAreBuiltIn() {
-    #expect(ChromeTheme.builtIn.filter { $0.family == .aqua } == [.aqua, .aquaGraphite])
-    #expect(ChromeTheme.named("aquaGraphite") == .aquaGraphite)
+    #expect(ChromeTheme.builtIn.filter { $0.family == .aqua } == [.gel, .gelGraphite])
+    #expect(ChromeTheme.named("gelGraphite") == .gelGraphite)
 }

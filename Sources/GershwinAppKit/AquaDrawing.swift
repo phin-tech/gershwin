@@ -9,7 +9,7 @@ public extension ClassicTheme {
     var isAqua: Bool { chrome.family == .aqua }
 
     /// Graphite turns the traffic lights grey too, not only the blue.
-    private var isGraphite: Bool { palette == .aquaGraphite }
+    private var isGraphite: Bool { palette == .gelGraphite }
 
     /// A window's outline: `rect` with its top corners rounded.
     func aquaWindowShape(_ rect: NSRect) -> NSBezierPath {

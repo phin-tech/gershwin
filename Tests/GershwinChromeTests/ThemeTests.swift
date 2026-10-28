@@ -11,7 +11,7 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
     #expect(ChromeTheme.named("beosDark") == .beosDark)
     #expect(ChromeTheme.named("nextstep") == nil)
     #expect(String(decoding: try JSONEncoder().encode(ChromeTheme.gizmo), as: UTF8.self) == #""gizmo""#)
-    #expect(try JSONDecoder().decode(ChromeTheme.self, from: Data(#""system7""#.utf8)) == .system7)
+    #expect(try JSONDecoder().decode(ChromeTheme.self, from: Data(#""classic""#.utf8)) == .classic)
     #expect(throws: DecodingError.self) { try JSONDecoder().decode(ChromeTheme.self, from: Data(#""nextstep""#.utf8)) }
 }
 
@@ -36,10 +36,10 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
 }
 
 @Test func followingMacOSShowsTheDarkThemeOnlyInDarkMode() {
-    let following = ThemeChoice(theme: .gizmo, light: .system7, dark: .beos, followsSystem: true)
-    #expect(following.theme(systemIsDark: false) == .system7)
+    let following = ThemeChoice(theme: .gizmo, light: .classic, dark: .beos, followsSystem: true)
+    #expect(following.theme(systemIsDark: false) == .classic)
     #expect(following.theme(systemIsDark: true) == .beos)
-    #expect(ThemeChoice(theme: .gizmo, light: .system7, dark: .beos).theme(systemIsDark: true) == .gizmo)
+    #expect(ThemeChoice(theme: .gizmo, light: .classic, dark: .beos).theme(systemIsDark: true) == .gizmo)
 }
 
 @Test func aModeNotChosenYetGetsTheThemesPartner() {
@@ -55,8 +55,8 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
     var choice = ThemeChoice(theme: .platinum, followsSystem: true)
     choice.choose(.beosDark, systemIsDark: true)
     #expect(choice.dark == .beosDark && choice.light == nil && choice.theme == .platinum)
-    choice.choose(.system1, systemIsDark: false)
-    #expect(choice.light == .system1)
+    choice.choose(.monochrome, systemIsDark: false)
+    #expect(choice.light == .monochrome)
     var fixed = ThemeChoice()
     fixed.choose(.beos, systemIsDark: true)
     #expect(fixed.theme == .beos && fixed.dark == nil)
@@ -64,12 +64,12 @@ func everyThemeHasSixteenTextColours(theme: ChromeTheme) {
 
 @Test(arguments: [false, true])
 func turningFollowingOffAndOnKeepsEveryChoice(systemIsDark: Bool) {
-    var choice = ThemeChoice(theme: .drawingBoard, light: .system7, dark: .os2Dark, followsSystem: true)
+    var choice = ThemeChoice(theme: .drawingBoard, light: .classic, dark: .os2Dark, followsSystem: true)
     let showing = choice.theme(systemIsDark: systemIsDark)
     choice.setFollowsSystem(false, systemIsDark: systemIsDark)
     #expect(choice.theme == showing)   // nothing changes on screen
     choice.setFollowsSystem(true, systemIsDark: systemIsDark)
-    #expect(choice.light == .system7 && choice.dark == .os2Dark)
+    #expect(choice.light == .classic && choice.dark == .os2Dark)
     #expect(choice.theme(systemIsDark: systemIsDark) == showing)
 }
 

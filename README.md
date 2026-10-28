@@ -1,23 +1,34 @@
 # Gershwin
 
-Windows and controls drawn the way the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1, 95 and 7, the Amiga's Workbench,
-Sun's OPEN LOOK and Mac OS X's Aqua drew them, for AppKit and SwiftUI on macOS 14 and
-later. Named for the planned successor to Copland, the Mac OS that never shipped.
+Windows and controls drawn in the style of the classic Mac OS, BeOS, OS/2 Warp, Windows 3.1, 95 and 7, the Amiga's
+Workbench, Sun's OPEN LOOK and Mac OS X, for AppKit and SwiftUI on macOS 14 and later. Named for the planned
+successor to Copland, the Mac OS that never shipped.
 
-Twenty themes are built in: **Platinum** (Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9
-had none), Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
-**System 7**, **System 1** (one bit, dithered), **BeOS** and **BeOS Dark**, **OS/2 Warp** and **OS/2 Warp
-Dark** (a sizing border round a blue title bar, the system menu at its left; the dark one is new, Warp had none),
-**Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), **Windows 7** and **Windows 7 Dark**
-(Aero: a glass frame with a bright line inside its outline, glass minimize and maximize buttons and a red close
-button hung from the top edge, the title at the left with its glow; square and opaque, and the dark one is new), and the Amiga's **Workbench** (3.1) and
-**Workbench 1.3** (the drag bar between the close gadget and the zoom and depth gadgets, the scroll bar's arrows
-together above the size gadget), and Sun's **OPEN LOOK** (a window menu button for boxes, a resize corner in each
-corner, pushpins on pop-ups, and the elevator scroll bar riding its cable), and Mac OS X's **Aqua** and **Aqua
-Graphite** (10.0 to 10.4: pinstripes, the close, minimize and zoom buttons as gel at the left of the title bar, a blue
-gel scroll thumb with both arrows at the bottom, capsule buttons with the default one blue; menus, tabs and dividers
-keep Platinum's shapes in Aqua's colours). A theme is a value (`ChromeTheme`), so an
-app can make its own.
+Twenty themes are built in. Each is inspired by a system, and none uses its code, fonts, icons or artwork:
+
+- **Platinum** (the look of Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9 had no dark mode),
+- Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
+- **Classic** (System 7's black and white) and **Monochrome** (System 1: one bit, dithered),
+- **BeOS** and **BeOS Dark**,
+- **OS/2 Warp** and **OS/2 Warp Dark** (a sizing border round a blue title bar, the system menu at its left; the dark
+  one is new, Warp had none),
+- **Windows 3.1** and **Windows 95** (OS/2's shape, with their own title bars), **Windows 7** and **Windows 7 Dark**
+  (Aero: a glass frame with a bright line inside its outline, glass minimize and maximize buttons and a red close
+  button hung from the top edge, the title at the left with its glow; square and opaque, and the dark one is new),
+- the Amiga's **Workbench** (3.1) and **Workbench 1.3** (the drag bar between the close gadget and the zoom and depth
+  gadgets, the scroll bar's arrows together above the size gadget),
+- Sun's **OPEN LOOK** (a window menu button for boxes, a resize corner in each corner, pushpins on pop-ups, and the
+  elevator scroll bar riding its cable),
+- **Gel** and **Gel Graphite** (inspired by Mac OS X 10.0 to 10.4: pinstripes, the close, minimize and zoom buttons
+  as gel at the left of the title bar, a blue gel scroll thumb with both arrows at the bottom, capsule buttons with
+  the default one blue; menus, tabs and dividers keep Platinum's shapes in Gel's colours).
+
+A theme is a value (`ChromeTheme`), so an app can make its own.
+
+> Gershwin is an independent project. It is not affiliated with, endorsed by or sponsored by Apple, Microsoft, IBM,
+> Be, Commodore, Sun or any other owner of the names it mentions. Mac OS, Windows, BeOS, OS/2, Warp, Amiga, Workbench,
+> OPEN LOOK and the other names are trademarks of their owners, used here only to say which look a theme is inspired
+> by. Gershwin contains no code, fonts, bitmaps or sounds from any of those systems.
 
 ## What's in it
 
@@ -31,18 +42,18 @@ app can make its own.
   close, zoom and collapse (WindowShade) boxes that track the mouse as the Toolbox did, a grow box that drags an
   outline, a scroll bar whose arrows and track repeat while held, and tabs in each era's style. Its chrome is drawn in
   Mac OS 9 pixels and scaled (1×, 1.5×, 2×) crisply; its content is not scaled.
-  Also, each drawn in the theme's own family (Platinum, System 1–7 or BeOS):
+  Also, each drawn in the theme's own family (Platinum, Classic, Monochrome or BeOS):
   - `ClassicMenu`: any NSMenu drawn as a classic menu (submenus, alternates, keyboard, Mac OS 8's sticky click),
     for context menus and pop-ups. Given a bar's titles (`ClassicMenuTitle`), moving onto another opens its menu, as
     in the menu bar; it works from an app that isn't active, like a status bar's helper; and given `tearOff`,
     it tears off as Mac OS 8.5's Application menu did, into a palette where it's dropped.
-  - `ClassicPopUpButton`, `ClassicButton` (with the default button's ring), `ClassicProgressBar` (and System 7's
+  - `ClassicPopUpButton`, `ClassicButton` (with the default button's ring), `ClassicProgressBar` (and Classic's
     barber pole), `ClassicAlert` (Stop, Caution and Note), and Balloon Help (`ClassicBalloon`), which a window's
     frame uses to explain its own parts.
   - Utility windows (`.utility`): a thin title bar and small boxes, or BeOS's smaller tab. They float over the
     document they work on, which stays the main window.
   - `ClassicTextField`: an edit-text field showing the keyboard focus as its era did (Mac OS 8's ring in the
-    highlight colour, System 7's caret alone, BeOS's blue outline), and `ClassicTabBar`, whose tabs also make a
+    highlight colour, Classic's caret alone, BeOS's blue outline), and `ClassicTabBar`, whose tabs also make a
     dialog's tab control (`opensOntoPanel`).
   - Adjustable panes (`ClassicSplitView`, over a `SplitTree` of the app's own views, which it never re-parents):
     each era's divider (Platinum's bevelled bar and split box, MPW's double line, Haiku's, OS/2's split bar), a scroll
@@ -63,7 +74,7 @@ app can make its own.
   draws macOS's focus ring), `ClassicTabView` (Mac OS 8's tab control) and `.classicField()`. Also
   `ClassicOutline` (a tree with disclosure triangles and arrow-key navigation), `ClassicSearchField`,
   `ClassicSecureField`, `ClassicComboBox`, `ClassicSegmentedControl`, `.classicSheet(isPresented:)` (a modal dialog
-  over a view; Aqua's hangs from the top), and `.classicContextMenu { [ClassicMenuItem] }`, a right-click menu drawn
+  over a view; Gel's hangs from the top), and `.classicContextMenu { [ClassicMenuItem] }`, a right-click menu drawn
   by `ClassicMenu` in place of macOS's. Esc closes a sheet or popover (`.classicPopover`). And
   `ClassicLevelIndicator`, `ClassicForm`/`ClassicFormRow`, `ClassicDatePicker` (Mac OS 8's date field with little
   arrows), `ClassicColorWell` (the 16-colour palette) and `ClassicIconGrid` (the Finder's icon view).

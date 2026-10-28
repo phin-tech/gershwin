@@ -144,7 +144,7 @@ func mainViewCoversTheScaledContentAreaUnscaled(scale: CGFloat) throws {
 
 @MainActor
 @Test func oneBitScrollTrackIsDithered() throws {
-    let bar = ClassicScrollBar(theme: ClassicTheme(.system1))
+    let bar = ClassicScrollBar(theme: ClassicTheme(.monochrome))
     bar.frame = NSRect(x: 0, y: 0, width: 16, height: 216)
     bar.position = ScrollPosition(total: 48, offset: 0, visible: 24)
     let rep = try render(bar)
@@ -155,7 +155,7 @@ func mainViewCoversTheScaledContentAreaUnscaled(scale: CGFloat) throws {
 }
 
 @MainActor
-@Test(arguments: [ChromeTheme.platinum, .system7])
+@Test(arguments: [ChromeTheme.platinum, .classic])
 func frontTabOpensOntoTheContentAndBackTabsSitBehind(appearance: ChromeTheme) throws {
     let bar = ClassicTabBar(theme: ClassicTheme(appearance))
     bar.frame = NSRect(x: 0, y: 0, width: 400, height: ChromeMetrics.tabBarHeight)
@@ -210,7 +210,7 @@ private func sampleMenu() -> NSMenu {
 }
 
 @MainActor
-@Test(arguments: [(ChromeTheme.platinum, true), (.system7, false), (.beos, false)] as [(ChromeTheme, Bool)])
+@Test(arguments: [(ChromeTheme.platinum, true), (.classic, false), (.beos, false)] as [(ChromeTheme, Bool)])
 func menuHighlightsItsRowInTheThemesWay(chrome: ChromeTheme, invertsText: Bool) throws {
     let view = ClassicMenuPreview.view(for: sampleMenu(), theme: ClassicTheme(chrome), highlighted: 0)
     let rep = try render(view)
@@ -248,7 +248,7 @@ func popUpButtonSizeScalesWithTheTheme(scale: CGFloat) {
 
 @MainActor
 @Test func anAquaWindowHasRoundTopCornersAndTrafficLights() throws {
-    let view = frameView(.document, ClassicTheme(.aqua))
+    let view = frameView(.document, ClassicTheme(.gel))
     view.drawsAsActive = true
     let rep = try render(view)
     // Clear outside the round corner; the pinstripes just inside it.
@@ -265,8 +265,8 @@ func popUpButtonSizeScalesWithTheTheme(scale: CGFloat) {
 }
 
 @MainActor
-@Test func aquaGraphitesTrafficLightsAreGrey() throws {
-    let view = frameView(.document, ClassicTheme(.aquaGraphite))
+@Test func gelGraphitesTrafficLightsAreGrey() throws {
+    let view = frameView(.document, ClassicTheme(.gelGraphite))
     view.drawsAsActive = true
     let rep = try render(view)
     let layout = WindowChromeLayout(bounds: view.bounds, style: .document, aqua: true)
@@ -291,7 +291,7 @@ func writeGallery() throws {
                 return button
             }()),
         ]
-        let alert = ClassicAlert(icon: chrome.id == "system1" ? .stop : chrome.family == .beos ? .note : .caution,
+        let alert = ClassicAlert(icon: chrome.id == "monochrome" ? .stop : chrome.family == .beos ? .note : .caution,
                                  message: "Close the window “~”?",
                                  informativeText: "vim is still running in it. Closing the window ends it.",
                                  buttons: ["Close", "Cancel"])
@@ -461,7 +461,7 @@ private struct GalleryControls: View {
 }
 
 @MainActor
-@Test(arguments: [(ChromeTheme.platinum, Palette.platinum.highlight), (.system7, Palette.system7.border)]
+@Test(arguments: [(ChromeTheme.platinum, Palette.platinum.highlight), (.classic, Palette.classic.border)]
       as [(ChromeTheme, RGB)])
 func dropHighlightIsABandInsideTheEdge(chrome: ChromeTheme, color: RGB) throws {
     let highlight = ClassicDropHighlight(theme: ClassicTheme(chrome))
@@ -486,7 +486,7 @@ func dropHighlightIsABandInsideTheEdge(chrome: ChromeTheme, color: RGB) throws {
 
 
 @MainActor
-@Test(arguments: [(ChromeTheme.platinum, true), (.system7, false), (.beos, true)] as [(ChromeTheme, Bool)])
+@Test(arguments: [(ChromeTheme.platinum, true), (.classic, false), (.beos, true)] as [(ChromeTheme, Bool)])
 func fieldShowsTheFocusAsItsEraDid(chrome: ChromeTheme, hasRing: Bool) throws {
     let theme = ClassicTheme(chrome)
     let field = ClassicTextField(theme: theme)
@@ -601,7 +601,7 @@ private final class Panes {
 }
 
 @MainActor
-@Test(arguments: [ChromeTheme.platinum, .system7, .beos, .os2])
+@Test(arguments: [ChromeTheme.platinum, .classic, .beos, .os2])
 func dividersAreDrawnInTheThemesWay(chrome: ChromeTheme) throws {
     let theme = ClassicTheme(chrome)
     let panes = Panes(theme: theme)

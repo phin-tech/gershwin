@@ -103,11 +103,11 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
     public static let drawingBoard = ChromeTheme(id: "drawingBoard", name: "Drawing Board", palette: .drawingBoard,
                                                  textColors: .drawingBoard)
     /// System 7, in colour: flat greys, black highlights, file-folder tabs.
-    public static let system7 = ChromeTheme(id: "system7", name: "System 7", tabStyle: .folder, palette: .system7,
+    public static let classic = ChromeTheme(id: "classic", name: "Classic", tabStyle: .folder, palette: .classic,
                                             textColors: .platinum)
     /// The 1984 Macintosh: one bit, black on white.
-    public static let system1 = ChromeTheme(id: "system1", name: "System 1", tabStyle: .folder, palette: .system1,
-                                            textColors: .system1)
+    public static let monochrome = ChromeTheme(id: "monochrome", name: "Monochrome", tabStyle: .folder, palette: .monochrome,
+                                            textColors: .monochrome)
     /// BeOS R5: yellow title tabs on grey windows.
     public static let beos = ChromeTheme(id: "beos", name: "BeOS", family: .beos, palette: .beos, textColors: .beos,
                                          partner: "beosDark")
@@ -144,16 +144,16 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
                                                 textColors: .workbench13, partner: "workbench")
 
     public static let builtIn: [ChromeTheme] = [
-        .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .system7, .system1, .beos, .beosDark, .os2, .os2Dark,
-        .windows31, .windows95, .windows7, .windows7Dark, .workbench, .workbench13, .openLook, .aqua, .aquaGraphite,
+        .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .classic, .monochrome, .beos, .beosDark, .os2, .os2Dark,
+        .windows31, .windows95, .windows7, .windows7Dark, .workbench, .workbench13, .openLook, .gel, .gelGraphite,
     ]
 
     /// Mac OS X's Aqua, as Jaguar and Panther drew it: pinstripes, and buttons like blue gel.
-    public static let aqua = ChromeTheme(id: "aqua", name: "Aqua", family: .aqua, palette: .aqua)
+    public static let gel = ChromeTheme(id: "gel", name: "Gel", family: .aqua, palette: .gel)
 
     /// Aqua's Graphite: the same, its blue and its traffic lights in grey, for those who found them loud.
-    public static let aquaGraphite = ChromeTheme(id: "aquaGraphite", name: "Aqua Graphite", family: .aqua,
-                                                 palette: .aquaGraphite)
+    public static let gelGraphite = ChromeTheme(id: "gelGraphite", name: "Gel Graphite", family: .aqua,
+                                                 palette: .gelGraphite)
 
     /// Sun's OPEN LOOK, as OpenWindows drew it: warm grey windows, the focused one's header darker; the text a
     /// cmdtool's, black on white.
@@ -244,7 +244,7 @@ public struct Palette: Hashable, Sendable {
         disabledText: RGB(0x9F9784), pinstripe: RGB(0xCDC4AC), thumb: RGB(0xE4D29A),
         content: RGB(0xFBF7EC), contentText: RGB(0x2B2925))
 
-    public static let system7 = Palette(
+    public static let classic = Palette(
         background: RGB(0xEEEEEE), light: RGB(0xFFFFFF), dark: RGB(0xAAAAAA), border: RGB(0x000000),
         well: RGB(0xCCCCCC), highlight: RGB(0x000000), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x999999), pinstripe: RGB(0x777777), thumb: RGB(0xDDDDFF),
@@ -252,7 +252,7 @@ public struct Palette: Hashable, Sendable {
 
     /// No greys at all: the bevels vanish into white, the title bar's stripes are black, and the scroll bar's track
     /// is dithered.
-    public static let system1 = Palette(
+    public static let monochrome = Palette(
         background: RGB(0xFFFFFF), light: RGB(0xFFFFFF), dark: RGB(0xFFFFFF), border: RGB(0x000000),
         well: RGB(0xFFFFFF), highlight: RGB(0x000000), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x808080), pinstripe: RGB(0x000000), thumb: RGB(0xFFFFFF),
@@ -351,14 +351,14 @@ public struct Palette: Hashable, Sendable {
 
     /// Aqua's: pinstripes of white and a very light grey, a sky-blue selection, the default button's blue in
     /// `thumb` (a scroll thumb's and a progress bar's too). From screenshots of 10.2: approximate.
-    public static let aqua = Palette(
+    public static let gel = Palette(
         background: RGB(0xECECEC), light: RGB(0xFFFFFF), dark: RGB(0x8C8C8C), border: RGB(0x5A5A5A),
         well: RGB(0xD4D4D4), highlight: RGB(0x3875D7), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x9A9A9A), pinstripe: RGB(0xE4E4E4), thumb: RGB(0x3A7FDC),
         content: RGB(0xFFFFFF), contentText: RGB(0x000000))
 
     /// Graphite: Aqua with its blues in slate grey.
-    public static let aquaGraphite = Palette(
+    public static let gelGraphite = Palette(
         background: RGB(0xECECEC), light: RGB(0xFFFFFF), dark: RGB(0x8C8C8C), border: RGB(0x5A5A5A),
         well: RGB(0xD4D4D4), highlight: RGB(0x6E7F94), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x9A9A9A), pinstripe: RGB(0xE4E4E4), thumb: RGB(0x8796A8),

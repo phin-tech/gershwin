@@ -40,7 +40,7 @@ private struct NewWidgets: View {
 func writeNewWidgets() throws {
     let folder = URL(fileURLWithPath: ProcessInfo.processInfo.environment["GERSHWIN_GALLERY"]!)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    for id in ["platinum", "aqua", "beos", "system7"] {
+    for id in ["platinum", "gel", "beos", "classic"] {
         guard let chrome = ChromeTheme.builtIn.first(where: { $0.id == id }) else { continue }
         let theme = ClassicTheme(chrome, scale: 1.5)
         let host = NSHostingView(rootView: NewWidgets().gershwin(theme))

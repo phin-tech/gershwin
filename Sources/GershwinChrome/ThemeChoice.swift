@@ -2,7 +2,7 @@
 /// apart, so turning following on and off never loses a choice. A mode that hasn't been given one gets the theme's
 /// partner for it (BeOS's dark one is BeOS Dark), or failing that Platinum or Hi-Tech, until one is chosen.
 ///
-/// Saved as `{"theme": "platinum", "light": "system7", "dark": "beosDark", "followsSystem": true}`; `light` and `dark`
+/// Saved as `{"theme": "platinum", "light": "classic", "dark": "beosDark", "followsSystem": true}`; `light` and `dark`
 /// are left out until chosen.
 public struct ThemeChoice: Hashable, Sendable, Codable {
     /// The theme while not following macOS.
