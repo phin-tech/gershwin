@@ -110,6 +110,20 @@ public struct TextColors: Hashable, Sendable {
         ansi: Array(repeating: RGB(0x000000), count: 7) + [RGB(0x808080)]
             + Array(repeating: RGB(0x000000), count: 7) + [RGB(0x808080)])
 
+    /// Monochrome inverted: every colour is white, except black, which is grey enough to read.
+    public static let monochromeDark = TextColors(
+        foreground: RGB(0xFFFFFF), background: RGB(0x000000), cursor: RGB(0xFFFFFF),
+        selectionBackground: RGB(0xFFFFFF), selectionForeground: RGB(0x000000),
+        ansi: [RGB(0x808080)] + Array(repeating: RGB(0xFFFFFF), count: 7)
+            + [RGB(0x808080)] + Array(repeating: RGB(0xFFFFFF), count: 7))
+
+    /// Green phosphor: every colour is the one green, black a dim one so it reads.
+    public static let phosphor = TextColors(
+        foreground: RGB(0x33FF33), background: RGB(0x000000), cursor: RGB(0x33FF33),
+        selectionBackground: RGB(0x33FF33), selectionForeground: RGB(0x000000),
+        ansi: [RGB(0x1A8F1A)] + Array(repeating: RGB(0x33FF33), count: 7)
+            + [RGB(0x1A8F1A)] + Array(repeating: RGB(0x33FF33), count: 7))
+
     /// The PC's sixteen CGA colours, which OS/2's text windows used and ANSI's sixteen come from, in ANSI's order.
     static let cga: [RGB] = [
         RGB(0x000000), RGB(0xAA0000), RGB(0x00AA00), RGB(0xAA5500),

@@ -107,7 +107,14 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
                                             textColors: .platinum)
     /// The 1984 Macintosh: one bit, black on white.
     public static let monochrome = ChromeTheme(id: "monochrome", name: "Monochrome", tabStyle: .folder, palette: .monochrome,
-                                            textColors: .monochrome)
+                                               textColors: .monochrome, partner: "monochromeDark")
+    /// The one-bit Mac inverted, as a Mac set to white on black: white lines on black, the wells still dithered.
+    public static let monochromeDark = ChromeTheme(id: "monochromeDark", name: "Monochrome Dark", tabStyle: .folder,
+                                                   isDark: true, palette: .monochromeDark,
+                                                   textColors: .monochromeDark, partner: "monochrome")
+    /// An 8-bit home computer's green-screen monitor: one phosphor green on black, the wells dithered.
+    public static let phosphor = ChromeTheme(id: "phosphor", name: "Phosphor", tabStyle: .folder, isDark: true,
+                                             palette: .phosphor, textColors: .phosphor)
     /// BeOS R5: yellow title tabs on grey windows.
     public static let beos = ChromeTheme(id: "beos", name: "BeOS", family: .beos, palette: .beos, textColors: .beos,
                                          partner: "beosDark")
@@ -144,7 +151,7 @@ public struct ChromeTheme: Hashable, Sendable, Identifiable, Codable {
                                                 textColors: .workbench13, partner: "workbench")
 
     public static let builtIn: [ChromeTheme] = [
-        .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .classic, .monochrome, .beos, .beosDark, .os2, .os2Dark,
+        .platinum, .hiTech, .platinumDark, .gizmo, .drawingBoard, .classic, .monochrome, .monochromeDark, .phosphor, .beos, .beosDark, .os2, .os2Dark,
         .windows31, .windows95, .windows7, .windows7Dark, .workbench, .workbench13, .openLook, .gel, .gelGraphite,
     ]
 
@@ -257,6 +264,20 @@ public struct Palette: Hashable, Sendable {
         well: RGB(0xFFFFFF), highlight: RGB(0x000000), text: RGB(0x000000), selectedText: RGB(0xFFFFFF),
         disabledText: RGB(0x808080), pinstripe: RGB(0x000000), thumb: RGB(0xFFFFFF),
         content: RGB(0xFFFFFF), contentText: RGB(0x000000), dithersWells: true)
+
+    /// Monochrome with black and white swapped: white lines and text on black, a white highlight with black text.
+    public static let monochromeDark = Palette(
+        background: RGB(0x000000), light: RGB(0x000000), dark: RGB(0x000000), border: RGB(0xFFFFFF),
+        well: RGB(0x000000), highlight: RGB(0xFFFFFF), text: RGB(0xFFFFFF), selectedText: RGB(0x000000),
+        disabledText: RGB(0x808080), pinstripe: RGB(0xFFFFFF), thumb: RGB(0x000000),
+        content: RGB(0x000000), contentText: RGB(0xFFFFFF), dithersWells: true)
+
+    /// Monochrome Dark in phosphor green: every line and letter the same green, the dim green for what's disabled.
+    public static let phosphor = Palette(
+        background: RGB(0x000000), light: RGB(0x000000), dark: RGB(0x000000), border: RGB(0x33FF33),
+        well: RGB(0x000000), highlight: RGB(0x33FF33), text: RGB(0x33FF33), selectedText: RGB(0x000000),
+        disabledText: RGB(0x1A8F1A), pinstripe: RGB(0x33FF33), thumb: RGB(0x000000),
+        content: RGB(0x000000), contentText: RGB(0x33FF33), dithersWells: true)
 
     public static let beos = Palette(
         background: RGB(0xD8D8D8), light: RGB(0xFFFFFF), dark: RGB(0x989898), border: RGB(0x606060),

@@ -4,11 +4,11 @@ Windows and controls drawn in the style of the classic Mac OS, BeOS, OS/2 Warp, 
 Workbench, Sun's OPEN LOOK and Mac OS X, for AppKit and SwiftUI on macOS 14 and later. Named for the planned
 successor to Copland, the Mac OS that never shipped.
 
-Twenty themes are built in. Each is inspired by a system, and none uses its code, fonts, icons or artwork:
+Twenty-two themes are built in. Each is inspired by a system, and none uses its code, fonts, icons or artwork:
 
 - **Platinum** (the look of Mac OS 8 and 9) and **Platinum Dark** (its greys inverted; Mac OS 9 had no dark mode),
 - Copland's **Hi-Tech**, **Gizmo** and **Drawing Board**,
-- **Classic** (System 7's black and white) and **Monochrome** (System 1: one bit, dithered),
+- **Classic** (System 7's black and white), **Monochrome** (System 1: one bit, dithered), **Monochrome Dark** (the same, white on black) and **Phosphor** (the same in green, as on an 8-bit home computer's monitor),
 - **BeOS** and **BeOS Dark**,
 - **OS/2 Warp** and **OS/2 Warp Dark** (a sizing border round a blue title bar, the system menu at its left; the dark
   one is new, Warp had none),

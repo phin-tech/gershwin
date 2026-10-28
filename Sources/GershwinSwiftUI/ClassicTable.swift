@@ -94,6 +94,8 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
     let emphasized: (Row) -> Bool
     let marked: (Row) -> Bool
     let onOpen: ((Row.ID) -> Void)?
+    /// A row's height, in Mac OS 9 pixels: 18 for the standard font, more for a larger one.
+    let rowHeight: CGFloat
     /// The caller's sort order, when it keeps one; nil when the table keeps its own.
     let sortOrder: Binding<ClassicSortOrder?>?
 
@@ -112,7 +114,7 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
     /// it, the caller owns the order and sorts the rows (in a database query, say, or to keep it between launches): the
     /// table shows them as given, marks the header, and sets the binding when a header is clicked.
     public init(_ rows: [Row], columns: [ClassicColumn<Row>], selection: Binding<Row.ID?>,
-                sortOrder: Binding<ClassicSortOrder?>? = nil,
+                sortOrder: Binding<ClassicSortOrder?>? = nil, rowHeight: CGFloat = 18,
                 emphasized: @escaping (Row) -> Bool = { _ in false }, marked: @escaping (Row) -> Bool = { _ in false },
                 onOpen: ((Row.ID) -> Void)? = nil) {
         self.rows = rows
@@ -122,6 +124,7 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
         self.emphasized = emphasized
         self.marked = marked
         self.onOpen = onOpen
+        self.rowHeight = rowHeight
     }
 
     private var currentSortOrder: ClassicSortOrder? { sortOrder?.wrappedValue ?? ownSortOrder }
@@ -159,7 +162,7 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
                     HStack(spacing: 0) {
                         ForEach(columns) { column in cell(row, column: column, bold: emphasized(row)) }
                     }
-                    .frame(height: 18 * s)
+                    .frame(height: rowHeight * s)
                     .foregroundStyle(Color(selected ? theme.palette.selectedText : theme.palette.text))
                     .background(selected ? Color(theme.palette.highlight)
                                 : marked(row) ? Color(theme.palette.highlight).opacity(0.3) : .clear)
