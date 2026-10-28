@@ -30,6 +30,22 @@ A theme is a value (`ChromeTheme`), so an app can make its own.
 > OPEN LOOK and the other names are trademarks of their owners, used here only to say which look a theme is inspired
 > by. Gershwin contains no code, fonts, bitmaps or sounds from any of those systems.
 
+## Screenshots
+
+The same window of controls in a few of the themes (`GERSHWIN_SCREENSHOTS=docs/screenshots swift test --filter writeScreenshots` redraws them):
+
+<table>
+<tr><td align="center"><img src="docs/screenshots/platinum.png" width="320"><br><sub>Platinum</sub></td><td align="center"><img src="docs/screenshots/beos.png" width="320"><br><sub>BeOS</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/gel.png" width="320"><br><sub>Gel</sub></td><td align="center"><img src="docs/screenshots/windows95.png" width="320"><br><sub>Windows 95</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/workbench.png" width="320"><br><sub>Workbench</sub></td><td align="center"><img src="docs/screenshots/phosphor.png" width="320"><br><sub>Phosphor</sub></td></tr>
+</table>
+
+<details><summary>The other themes</summary>
+
+<img src="docs/screenshots/beosDark.png" width="320" alt="beosDark"> <img src="docs/screenshots/classic.png" width="320" alt="classic"> <img src="docs/screenshots/drawingBoard.png" width="320" alt="drawingBoard"> <img src="docs/screenshots/gelGraphite.png" width="320" alt="gelGraphite"> <img src="docs/screenshots/gizmo.png" width="320" alt="gizmo"> <img src="docs/screenshots/hiTech.png" width="320" alt="hiTech"> <img src="docs/screenshots/monochrome.png" width="320" alt="monochrome"> <img src="docs/screenshots/monochromeDark.png" width="320" alt="monochromeDark"> <img src="docs/screenshots/openLook.png" width="320" alt="openLook"> <img src="docs/screenshots/os2.png" width="320" alt="os2"> <img src="docs/screenshots/os2Dark.png" width="320" alt="os2Dark"> <img src="docs/screenshots/platinumDark.png" width="320" alt="platinumDark"> <img src="docs/screenshots/windows31.png" width="320" alt="windows31"> <img src="docs/screenshots/windows7.png" width="320" alt="windows7"> <img src="docs/screenshots/windows7Dark.png" width="320" alt="windows7Dark"> <img src="docs/screenshots/workbench13.png" width="320" alt="workbench13"> 
+
+</details>
+
 ## What's in it
 
 - **GershwinChrome**: plain values, no AppKit, tested headless. The themes (`ChromeTheme.builtIn`, found and saved
