@@ -17,10 +17,18 @@ public struct ClassicField: NSViewRepresentable {
     let focusesOnAppear: Bool
     let onSubmit: ((_ shift: Bool) -> Void)?
     let onCancel: (() -> Void)?
+    let isSecure: Bool
+    let leadingInset: CGFloat
+    let trailingInset: CGFloat
 
     /// `onSubmit` is Return (and whether shift was down), `onCancel` Esc; without them, they do what they would.
+    /// `isSecure` shows bullets for what's typed. The insets leave room inside the box for a glyph drawn over it.
     public init(_ placeholder: String? = nil, text: Binding<String>, focusesOnAppear: Bool = false,
+                isSecure: Bool = false, leadingInset: CGFloat = 0, trailingInset: CGFloat = 0,
                 onSubmit: ((_ shift: Bool) -> Void)? = nil, onCancel: (() -> Void)? = nil) {
+        self.isSecure = isSecure
+        self.leadingInset = leadingInset
+        self.trailingInset = trailingInset
         _text = text
         self.placeholder = placeholder
         self.focusesOnAppear = focusesOnAppear
@@ -29,7 +37,7 @@ public struct ClassicField: NSViewRepresentable {
     }
 
     public func makeNSView(context: Context) -> ClassicTextField {
-        let field = ClassicTextField(theme: theme)
+        let field = ClassicTextField(theme: theme, isSecure: isSecure)
         field.focusesOnAppear = focusesOnAppear
         field.setContentHuggingPriority(.required, for: .vertical)
         return field
@@ -37,6 +45,8 @@ public struct ClassicField: NSViewRepresentable {
 
     public func updateNSView(_ field: ClassicTextField, context: Context) {
         if field.theme != theme { field.theme = theme }
+        field.leadingInset = leadingInset
+        field.trailingInset = trailingInset
         if field.placeholder != placeholder { field.placeholder = placeholder }
         field.stringValue = text
         let binding = $text

@@ -140,26 +140,37 @@ public struct ClassicTable<Row: Identifiable>: View where Row.ID: Hashable & Sen
             .frame(height: 20 * s)
             .background(Color(theme.palette.background))
             Rectangle().fill(Color(theme.palette.dark)).frame(height: 1)
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(shownRows) { row in
-                        let selected = row.id == selection
-                        HStack(spacing: 0) {
-                            ForEach(columns) { column in cell(row, column: column, bold: emphasized(row)) }
-                        }
-                        .frame(height: 18 * s)
-                        .foregroundStyle(Color(selected ? theme.palette.selectedText : theme.palette.text))
-                        .background(selected ? Color(theme.palette.highlight)
-                                    : marked(row) ? Color(theme.palette.highlight).opacity(0.3) : .clear)
-                        .contentShape(Rectangle())
-                        .onTapGesture { selection = row.id }
-                        // Alongside, not instead: a single click selects at once, without waiting to see if a second comes.
-                        .simultaneousGesture(TapGesture(count: 2).onEnded { onOpen?(row.id) })
+            ScrollViewReader { proxy in
+                rowList
+                    // The selection set from elsewhere (the keys, say) may be out of sight: the list follows it.
+                    .onChange(of: selection) { _, id in
+                        if let id { proxy.scrollTo(id) }
                     }
+            }
+        }
+    }
+
+    private var rowList: some View {
+        let s = theme.scale
+        return ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(shownRows) { row in
+                    let selected = row.id == selection
+                    HStack(spacing: 0) {
+                        ForEach(columns) { column in cell(row, column: column, bold: emphasized(row)) }
+                    }
+                    .frame(height: 18 * s)
+                    .foregroundStyle(Color(selected ? theme.palette.selectedText : theme.palette.text))
+                    .background(selected ? Color(theme.palette.highlight)
+                                : marked(row) ? Color(theme.palette.highlight).opacity(0.3) : .clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture { selection = row.id }
+                    // Alongside, not instead: a single click selects at once, without waiting to see if a second comes.
+                    .simultaneousGesture(TapGesture(count: 2).onEnded { onOpen?(row.id) })
                 }
             }
-            .background(Color(theme.palette.well))
         }
+        .background(Color(theme.palette.well))
     }
 
     // MARK: Columns

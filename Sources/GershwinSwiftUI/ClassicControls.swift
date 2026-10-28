@@ -7,7 +7,7 @@ import GershwinAppKit
 import GershwinChrome
 import SwiftUI
 
-private enum Family {
+enum Family {
     case platinum, classic, beos, aqua
 
     init(_ chrome: ChromeTheme) {
@@ -21,7 +21,7 @@ private enum Family {
 }
 
 /// BeOS's blue, for the parts of its controls that show a value.
-private let beosBlue = Color(.sRGB, red: 0.31, green: 0.5, blue: 0.85)
+let beosBlue = Color(.sRGB, red: 0.31, green: 0.5, blue: 0.85)
 
 // MARK: - Disclosure triangle
 

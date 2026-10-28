@@ -34,9 +34,16 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
     /// Return (with the shift key's state, for "the one before"), and Esc.
     public var onSubmit: ((_ shift: Bool) -> Void)?
     public var onCancel: (() -> Void)?
+    /// ↑ (-1) and ↓ (1), for a field that sits over a list, as a search box does. Without it the arrows move the caret.
+    public var onMove: ((_ step: Int) -> Void)?
 
     /// The NSTextField that holds the text, for its first-responder status and accessibility.
-    public let field: NSTextField = FocusReportingField()
+    public let field: NSTextField
+
+    /// Extra room inside the box, in Mac OS 9 pixels, beyond the text's own inset, for a glyph an owner draws over
+    /// it: a search field's magnifier at the left, its clear button at the right.
+    public var leadingInset: CGFloat = 0 { didSet { if leadingInset != oldValue { needsLayout = true } } }
+    public var trailingInset: CGFloat = 0 { didSet { if trailingInset != oldValue { needsLayout = true } } }
 
     /// Whether the field has the keyboard focus (the field editor is editing it).
     public private(set) var isFocused = false {
@@ -51,8 +58,10 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
         static let textInset: CGFloat = 4
     }
 
-    public init(theme: ClassicTheme) {
+    /// - Parameter isSecure: shows bullets in place of what's typed, as a password field does.
+    public init(theme: ClassicTheme, isSecure: Bool = false) {
         self.theme = theme
+        field = isSecure ? FocusReportingSecureField() : FocusReportingField()
         super.init(frame: .zero)
         field.isBordered = false
         field.drawsBackground = false
@@ -64,7 +73,7 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
         field.cell?.isScrollable = true
         field.cell?.wraps = false
         field.delegate = self
-        (field as? FocusReportingField)?.onFocus = { [weak self] in self?.focusChanged(true) }
+        (field as? any FocusReporting)?.onFocus = { [weak self] in self?.focusChanged(true) }
         addSubview(field)
         applyTheme()
         NotificationCenter.default.addObserver(self, selector: #selector(editingEnded),
@@ -129,7 +138,10 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
     public override func layout() {
         super.layout()
         let s = theme.scale
-        let inner = box.insetBy(dx: Metrics.textInset * s, dy: 0)
+        let box = box
+        let inner = NSRect(x: box.minX + (Metrics.textInset + leadingInset) * s, y: box.minY,
+                           width: max(0, box.width - (Metrics.textInset * 2 + leadingInset + trailingInset) * s),
+                           height: box.height)
         let height = field.intrinsicContentSize.height
         field.frame = NSRect(x: inner.minX, y: (inner.midY - height / 2).rounded(), width: inner.width, height: height)
     }
@@ -211,14 +223,37 @@ public final class ClassicTextField: NSView, NSTextFieldDelegate {
             guard let onCancel else { return false }
             onCancel()
             return true
+        case #selector(NSResponder.moveUp(_:)):
+            guard let onMove else { return false }
+            onMove(-1)
+            return true
+        case #selector(NSResponder.moveDown(_:)):
+            guard let onMove else { return false }
+            onMove(1)
+            return true
         default:
             return false
         }
     }
 }
 
+@MainActor private protocol FocusReporting: AnyObject {
+    var onFocus: (() -> Void)? { get set }
+}
+
 /// An NSTextField that says when it takes the focus; the end of editing says when it loses it.
-private final class FocusReportingField: NSTextField {
+private final class FocusReportingField: NSTextField, FocusReporting {
+    var onFocus: (() -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became { onFocus?() }
+        return became
+    }
+}
+
+/// The same for a password field.
+private final class FocusReportingSecureField: NSSecureTextField, FocusReporting {
     var onFocus: (() -> Void)?
 
     override func becomeFirstResponder() -> Bool {
