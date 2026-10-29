@@ -78,7 +78,8 @@ public final class ClassicThemeStore {
         URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/\(app)/settings.json")
     }
 
-    private nonisolated static func isDark(_ appearance: NSAppearance) -> Bool {
+    /// Whether an appearance is a dark one (what an app that watches `effectiveAppearance` itself asks).
+    public nonisolated static func isDark(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 

@@ -80,6 +80,10 @@ The same window of controls in a few of the themes (`GERSHWIN_SCREENSHOTS=docs/s
     them from an NSMenu. Typing narrows the list by fuzzy match (`PaletteMatcher`, in GershwinChrome, with the matched
     letters underlined), what was chosen lately floats up (`PaletteHistory`), and `update(entries:)` brings in entries
     that arrive late. `swift run PaletteDemo` in `Examples/PaletteDemo` tries it.
+  - A menu of themes (`ClassicThemeMenu`): "Follow System Light and Dark" and an item for each theme, the one showing
+    checked, added to any NSMenu with `addItems(to:)`, and `paletteEntries()` for a theme entry each in a ClassicPalette.
+    It acts on a `ClassicThemeSource` (a `ThemeChoice` and whether macOS is dark): `ClassicThemeStore` is one, and an
+    app that keeps its settings another way makes its own. Keep the object as long as its menu.
   - A progress bar in a document window's placard (`placardProgress`), and Mac OS 8's drop highlight
     (`ClassicDropHighlight`), to show over a view while something dragged over it can drop there.
 - **GershwinSwiftUI**: `.gershwin(theme)` at the root of a view restyles SwiftUI's own `Button`, `Toggle`,
